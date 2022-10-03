@@ -57,12 +57,17 @@ public class Quickstart extends QuickStartBase {
     return null;
   }
 
+  private File _tmpDir;
+
+  public File getTmpDir(){
+    return _tmpDir;
+  }
   public void execute()
       throws Exception {
-    File quickstartTmpDir = new File(_dataDir, String.valueOf(System.currentTimeMillis()));
-    File quickstartRunnerDir = new File(quickstartTmpDir, "quickstart");
+    _tmpDir = new File(_dataDir, String.valueOf(System.currentTimeMillis()));
+    File quickstartRunnerDir  = new File(_tmpDir, "quickstart");
     Preconditions.checkState(quickstartRunnerDir.mkdirs());
-    List<QuickstartTableRequest> quickstartTableRequests = bootstrapOfflineTableDirectories(quickstartTmpDir);
+    List<QuickstartTableRequest> quickstartTableRequests = bootstrapOfflineTableDirectories(_tmpDir);
 
     QuickstartRunner runner =
         new QuickstartRunner(quickstartTableRequests, 1, 1, getNumQuickstartRunnerServers(), 1, quickstartRunnerDir,
@@ -74,7 +79,7 @@ public class Quickstart extends QuickStartBase {
       try {
         printStatus(Color.GREEN, "***** Shutting down offline quick start *****");
         runner.stop();
-        FileUtils.deleteDirectory(quickstartTmpDir);
+        FileUtils.deleteDirectory(_tmpDir);
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -146,3 +151,4 @@ public class Quickstart extends QuickStartBase {
     PinotAdministrator.main(arguments.toArray(new String[arguments.size()]));
   }
 }
+\
