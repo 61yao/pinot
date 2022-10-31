@@ -38,10 +38,8 @@ import org.apache.pinot.spi.data.Schema;
  * upgrading Calcite versions.
  */
 public class TypeFactory extends JavaTypeFactoryImpl {
-  private final RelDataTypeSystem _typeSystem;
 
-  public TypeFactory(RelDataTypeSystem typeSystem) {
-    _typeSystem = typeSystem;
+  public TypeFactory() {
   }
 
   public RelDataType createRelDataTypeFromSchema(Schema schema) {
@@ -52,6 +50,7 @@ public class TypeFactory extends JavaTypeFactoryImpl {
     return builder.build();
   }
 
+  // Converting storedDataType to Sql type.
   private RelDataType toRelDataType(FieldSpec fieldSpec) {
     switch (fieldSpec.getDataType()) {
       case INT:

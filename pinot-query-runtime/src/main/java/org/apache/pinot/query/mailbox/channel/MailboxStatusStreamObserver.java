@@ -22,8 +22,6 @@ import io.grpc.stub.StreamObserver;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.pinot.common.proto.Mailbox;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 /**
@@ -35,9 +33,7 @@ import org.slf4j.LoggerFactory;
  * end.
  */
 public class MailboxStatusStreamObserver implements StreamObserver<Mailbox.MailboxStatus> {
-  private static final Logger LOGGER = LoggerFactory.getLogger(MailboxStatusStreamObserver.class);
   private static final int DEFAULT_MAILBOX_QUEUE_CAPACITY = 5;
-  private static final long DEFAULT_MAILBOX_POLL_TIMEOUT_MS = 1000L;
   private final AtomicInteger _bufferSize = new AtomicInteger(5);
   private final AtomicBoolean _isCompleted = new AtomicBoolean(false);
 
@@ -60,9 +56,9 @@ public class MailboxStatusStreamObserver implements StreamObserver<Mailbox.Mailb
 
   @Override
   public void onNext(Mailbox.MailboxStatus mailboxStatus) {
-    // when received a mailbox status from the receiving end, sending end update the known buffer size available
+    // when received a mailbox status from the receiving end, sending end updates the known buffer size available
     // so we can make better throughput send judgement. here is a simple example.
-    // TODO: this feedback info is not used to throttle the send speed. it is currently being discarded.
+    // TODO: this feedback info is not used to throttle the send speed. it is currently discarded.
     if (mailboxStatus.getMetadataMap().containsKey(ChannelUtils.MAILBOX_METADATA_BUFFER_SIZE_KEY)) {
       _bufferSize.set(Integer.parseInt(
           mailboxStatus.getMetadataMap().get(ChannelUtils.MAILBOX_METADATA_BUFFER_SIZE_KEY)));
@@ -74,16 +70,11 @@ public class MailboxStatusStreamObserver implements StreamObserver<Mailbox.Mailb
   @Override
   public void onError(Throwable e) {
     _isCompleted.set(true);
-    shutdown();
     throw new RuntimeException(e);
-  }
-
-  private void shutdown() {
   }
 
   @Override
   public void onCompleted() {
     _isCompleted.set(true);
-    shutdown();
   }
 }

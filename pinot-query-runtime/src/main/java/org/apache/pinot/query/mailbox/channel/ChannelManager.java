@@ -35,10 +35,8 @@ import org.apache.pinot.spi.env.PinotConfiguration;
  * <p>the channelId should be in the format of: <code>"senderHost:senderPort:receiverHost:receiverPort"</code>
  */
 public class ChannelManager {
-
   private final GrpcMailboxService _mailboxService;
   private final GrpcMailboxServer _grpcMailboxServer;
-
   private final ConcurrentHashMap<String, ManagedChannel> _channelMap = new ConcurrentHashMap<>();
 
   public ChannelManager(GrpcMailboxService mailboxService, PinotConfiguration extraConfig) {
@@ -54,11 +52,13 @@ public class ChannelManager {
     _grpcMailboxServer.shutdown();
   }
 
+  // Channel ID has to be in the format of server:port
   public ManagedChannel getChannel(String channelId) {
     return _channelMap.computeIfAbsent(channelId,
         (id) -> constructChannel(id.split(":")));
   }
 
+  // TODO: make DEFAULT_MAX_INBOUND_QUERY_DATA_BLOCK_SIZE_BYTES configurable.
   private static ManagedChannel constructChannel(String[] channelParts) {
     ManagedChannelBuilder<?> managedChannelBuilder = ManagedChannelBuilder
         .forAddress(channelParts[0], Integer.parseInt(channelParts[1]))

@@ -49,8 +49,6 @@ public class MailboxReceiveOperator extends BaseOperator<TransferableBlock> {
   private static final String EXPLAIN_NAME = "MAILBOX_RECEIVE";
 
   private final MailboxService<TransferableBlock> _mailboxService;
-  private final RelDistribution.Type _exchangeType;
-  private final KeySelector<Object[], Object[]> _keySelector;
   private final List<ServerInstance> _sendingStageInstances;
   private final DataSchema _dataSchema;
   private final String _hostName;
@@ -62,11 +60,10 @@ public class MailboxReceiveOperator extends BaseOperator<TransferableBlock> {
 
   public MailboxReceiveOperator(MailboxService<TransferableBlock> mailboxService, DataSchema dataSchema,
       List<ServerInstance> sendingStageInstances, RelDistribution.Type exchangeType,
-      KeySelector<Object[], Object[]> keySelector, String hostName, int port, long jobId, int stageId) {
+     String hostName, int port, long jobId, int stageId) {
     _dataSchema = dataSchema;
     _mailboxService = mailboxService;
-    _exchangeType = exchangeType;
-    if (_exchangeType == RelDistribution.Type.SINGLETON) {
+    if (exchangeType == RelDistribution.Type.SINGLETON) {
       ServerInstance singletonInstance = null;
       for (ServerInstance serverInstance : sendingStageInstances) {
         if (serverInstance.getHostname().equals(_mailboxService.getHostname())
@@ -92,7 +89,6 @@ public class MailboxReceiveOperator extends BaseOperator<TransferableBlock> {
     _stageId = stageId;
     _timeout = QueryConfig.DEFAULT_TIMEOUT_NANO;
     _upstreamErrorBlock = null;
-    _keySelector = keySelector;
   }
 
   @Override
@@ -142,10 +138,6 @@ public class MailboxReceiveOperator extends BaseOperator<TransferableBlock> {
     } else {
       return TransferableBlockUtils.getEndOfStreamTransferableBlock(_dataSchema);
     }
-  }
-
-  public RelDistribution.Type getExchangeType() {
-    return _exchangeType;
   }
 
   private MailboxIdentifier toMailboxId(ServerInstance serverInstance) {

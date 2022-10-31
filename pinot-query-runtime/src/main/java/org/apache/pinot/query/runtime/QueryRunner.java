@@ -87,7 +87,7 @@ public class QueryRunner {
       _serverExecutor = new ServerQueryExecutorV1Impl();
       _serverExecutor.init(config, instanceDataManager, serverMetrics);
       _workerExecutor = new WorkerQueryExecutor();
-      _workerExecutor.init(config, serverMetrics, _mailboxService, _hostname, _port);
+      _workerExecutor.init(_mailboxService, _hostname, _port);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -112,25 +112,28 @@ public class QueryRunner {
       // TODO: make server query request return via mailbox, this is a hack to gather the non-streaming data table
       // and package it here for return. But we should really use a MailboxSendOperator directly put into the
       // server executor.
+      // TODO: consider adding a deadline for call over network.
       List<ServerQueryRequest> serverQueryRequests =
           ServerRequestUtils.constructServerQueryRequest(distributedStagePlan, requestMetadataMap,
               _helixPropertyStore);
 
       // send the data table via mailbox in one-off fashion (e.g. no block-level split, one data table/partition key)
       List<BaseDataBlock> serverQueryResults = new ArrayList<>(serverQueryRequests.size());
+      // TODO: Add early termination if any of the server query fails.
+      // This server query request doesn't have time out set, which means each of this query request set timeout
+      // to default, i.e. 15_000L ms (15s). If every request fails, we will wait here for # of request x 15s.
+      // TODO: run these request in parallel.
       for (ServerQueryRequest request : serverQueryRequests) {
         serverQueryResults.add(processServerQuery(request, executorService));
       }
-
       MailboxSendNode sendNode = (MailboxSendNode) distributedStagePlan.getStageRoot();
       StageMetadata receivingStageMetadata = distributedStagePlan.getMetadataMap().get(sendNode.getReceiverStageId());
-      MailboxSendOperator mailboxSendOperator =
-          new MailboxSendOperator(_mailboxService, sendNode.getDataSchema(),
-              new LeafStageTransferableBlockOperator(serverQueryResults, sendNode.getDataSchema()),
-              receivingStageMetadata.getServerInstances(), sendNode.getExchangeType(),
-              sendNode.getPartitionKeySelector(), _hostname, _port, serverQueryRequests.get(0).getRequestId(),
-              sendNode.getStageId());
+      MailboxSendOperator mailboxSendOperator = new MailboxSendOperator(_mailboxService,
+          new LeafStageTransferableBlockOperator(serverQueryResults, sendNode.getDataSchema()),
+          receivingStageMetadata.getServerInstances(), sendNode.getExchangeType(), sendNode.getPartitionKeySelector(),
+          _hostname, _port, serverQueryRequests.get(0).getRequestId(), sendNode.getStageId());
       int blockCounter = 0;
+      // TODO: Fix busy waiting or propagate the error.
       while (!TransferableBlockUtils.isEndOfStream(mailboxSendOperator.nextBlock())) {
         LOGGER.debug("Acquired transferable block: {}", blockCounter++);
       }
@@ -170,11 +173,9 @@ public class QueryRunner {
    */
   private static class LeafStageTransferableBlockOperator extends BaseOperator<TransferableBlock> {
     private static final String EXPLAIN_NAME = "LEAF_STAGE_TRANSFER_OPERATOR";
-
     private final BaseDataBlock _errorBlock;
     private final List<BaseDataBlock> _baseDataBlocks;
     private final DataSchema _dataSchema;
-    private boolean _hasTransferred;
     private int _currentIndex;
 
     private LeafStageTransferableBlockOperator(List<BaseDataBlock> baseDataBlocks, DataSchema dataSchema) {
@@ -203,14 +204,12 @@ public class QueryRunner {
       if (_errorBlock != null) {
         _currentIndex = -1;
         return new TransferableBlock(_errorBlock);
-      } else {
-        if (_currentIndex < _baseDataBlocks.size()) {
-          return new TransferableBlock(_baseDataBlocks.get(_currentIndex++));
-        } else {
-          _currentIndex = -1;
-          return new TransferableBlock(DataBlockUtils.getEndOfStreamDataBlock(_dataSchema));
-        }
       }
+      if (_currentIndex < _baseDataBlocks.size()) {
+        return new TransferableBlock(_baseDataBlocks.get(_currentIndex++));
+      }
+      _currentIndex = -1;
+      return new TransferableBlock(DataBlockUtils.getEndOfStreamDataBlock(_dataSchema));
     }
   }
 

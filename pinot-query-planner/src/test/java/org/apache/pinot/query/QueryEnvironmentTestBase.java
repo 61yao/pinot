@@ -35,7 +35,7 @@ public class QueryEnvironmentTestBase {
   public void setUp() {
     // the port doesn't matter as we are not actually making a server call.
     RoutingManager routingManager = QueryEnvironmentTestUtils.getMockRoutingManager(1, 2);
-    _queryEnvironment = new QueryEnvironment(new TypeFactory(new TypeSystem()),
+    _queryEnvironment = new QueryEnvironment(new TypeFactory(),
         CalciteSchemaBuilder.asRootSchema(new PinotCatalog(QueryEnvironmentTestUtils.mockTableCache())),
         new WorkerManager("localhost", 3, routingManager));
   }

@@ -63,7 +63,8 @@ import org.slf4j.LoggerFactory;
 
 public class MultiStageBrokerRequestHandler extends BaseBrokerRequestHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MultiStageBrokerRequestHandler.class);
-  private static final long DEFAULT_TIMEOUT_NANO = 10_000_000_000L;
+  // TODO: Make this configurable
+  private static final long DEFAULT_TIMEOUT_NANO = 10_000_000_000L; // 10s
   private final String _reducerHostname;
   private final int _reducerPort;
 
@@ -78,7 +79,7 @@ public class MultiStageBrokerRequestHandler extends BaseBrokerRequestHandler {
     LOGGER.info("Using Multi-stage BrokerRequestHandler.");
     String reducerHostname = config.getProperty(QueryConfig.KEY_OF_QUERY_RUNNER_HOSTNAME);
     if (reducerHostname == null) {
-      // use broker ID as host name, but remove the
+      // use broker ID as host name, but remove the prefix
       String brokerId = config.getProperty(CommonConstants.Broker.CONFIG_OF_BROKER_ID);
       brokerId = brokerId.startsWith(CommonConstants.Helix.PREFIX_OF_BROKER_INSTANCE) ? brokerId.substring(
           CommonConstants.Helix.SERVER_INSTANCE_PREFIX_LENGTH) : brokerId;
@@ -87,7 +88,7 @@ public class MultiStageBrokerRequestHandler extends BaseBrokerRequestHandler {
     }
     _reducerHostname = reducerHostname;
     _reducerPort = config.getProperty(QueryConfig.KEY_OF_QUERY_RUNNER_PORT, QueryConfig.DEFAULT_QUERY_RUNNER_PORT);
-    _queryEnvironment = new QueryEnvironment(new TypeFactory(new TypeSystem()),
+    _queryEnvironment = new QueryEnvironment(new TypeFactory(),
         CalciteSchemaBuilder.asRootSchema(new PinotCatalog(tableCache)),
         new WorkerManager(_reducerHostname, _reducerPort, routingManager));
     _queryDispatcher = new QueryDispatcher();

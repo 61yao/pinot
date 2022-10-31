@@ -83,15 +83,14 @@ public class PhysicalPlanVisitor implements StageNodeVisitor<Operator<Transferab
   public Operator<TransferableBlock> visitMailboxReceive(MailboxReceiveNode node, Void context) {
     List<ServerInstance> sendingInstances = _metadataMap.get(node.getSenderStageId()).getServerInstances();
     return new MailboxReceiveOperator(_mailboxService, node.getDataSchema(), sendingInstances,
-        node.getExchangeType(), node.getPartitionKeySelector(), _hostName, _port, _requestId,
-        node.getSenderStageId());
+        node.getExchangeType(),  _hostName, _port, _requestId, node.getSenderStageId());
   }
 
   @Override
   public Operator<TransferableBlock> visitMailboxSend(MailboxSendNode node, Void context) {
     Operator<TransferableBlock> nextOperator = node.getInputs().get(0).visit(this, null);
     StageMetadata receivingStageMetadata = _metadataMap.get(node.getReceiverStageId());
-    return new MailboxSendOperator(_mailboxService, node.getDataSchema(), nextOperator,
+    return new MailboxSendOperator(_mailboxService, nextOperator,
         receivingStageMetadata.getServerInstances(), node.getExchangeType(), node.getPartitionKeySelector(),
         _hostName, _port, _requestId, node.getStageId());
   }
@@ -117,9 +116,8 @@ public class PhysicalPlanVisitor implements StageNodeVisitor<Operator<Transferab
     Operator<TransferableBlock> leftOperator = left.visit(this, null);
     Operator<TransferableBlock> rightOperator = right.visit(this, null);
 
-    return new HashJoinOperator(leftOperator, left.getDataSchema(), rightOperator,
-        right.getDataSchema(), node.getDataSchema(), node.getJoinKeys(),
-        node.getJoinClauses(), node.getJoinRelType());
+    return new HashJoinOperator(leftOperator,  rightOperator,
+       node.getDataSchema(), node.getJoinKeys(), node.getJoinClauses(), node.getJoinRelType());
   }
 
   @Override

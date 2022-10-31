@@ -57,7 +57,6 @@ public class MailboxSendOperator extends BaseOperator<TransferableBlock> {
   // TODO: Deduct this value via grpc config maximum byte size; and make it configurable with override.
   // TODO: Max block size is a soft limit. only counts fixedSize datatable byte buffer
   private static final int MAX_MAILBOX_CONTENT_SIZE_BYTES = 4 * 1024 * 1024;
-
   private final List<ServerInstance> _receivingStageInstances;
   private final RelDistribution.Type _exchangeType;
   private final KeySelector<Object[], Object[]> _keySelector;
@@ -66,14 +65,12 @@ public class MailboxSendOperator extends BaseOperator<TransferableBlock> {
   private final long _jobId;
   private final int _stageId;
   private final MailboxService<TransferableBlock> _mailboxService;
-  private final DataSchema _dataSchema;
   private Operator<TransferableBlock> _dataTableBlockBaseOperator;
 
-  public MailboxSendOperator(MailboxService<TransferableBlock> mailboxService, DataSchema dataSchema,
+  public MailboxSendOperator(MailboxService<TransferableBlock> mailboxService,
       Operator<TransferableBlock> dataTableBlockBaseOperator, List<ServerInstance> receivingStageInstances,
       RelDistribution.Type exchangeType, KeySelector<Object[], Object[]> keySelector, String hostName, int port,
       long jobId, int stageId) {
-    _dataSchema = dataSchema;
     _mailboxService = mailboxService;
     _dataTableBlockBaseOperator = dataTableBlockBaseOperator;
     _exchangeType = exchangeType;
@@ -127,8 +124,7 @@ public class MailboxSendOperator extends BaseOperator<TransferableBlock> {
           if (isEndOfStream) {
             sendDataTableBlockToServers(_receivingStageInstances, transferableBlock, type, true);
           } else {
-            int randomInstanceIdx =
-                _exchangeType == RelDistribution.Type.SINGLETON ? 0 : RANDOM.nextInt(_receivingStageInstances.size());
+            int randomInstanceIdx = RANDOM.nextInt(_receivingStageInstances.size());
             ServerInstance randomInstance = _receivingStageInstances.get(randomInstanceIdx);
             sendDataTableBlockToServers(Arrays.asList(randomInstance), transferableBlock, type, false);
           }
@@ -193,6 +189,7 @@ public class MailboxSendOperator extends BaseOperator<TransferableBlock> {
       // Split the block only when it is not end of stream block.
       List<TransferableBlock> chunks = TransferableBlockUtils.splitBlock(transferableBlock, type,
           MAX_MAILBOX_CONTENT_SIZE_BYTES);
+      // TODO: send the data block concurrently.
       for (ServerInstance server : servers) {
         for (TransferableBlock chunk : chunks) {
           sendDataTableBlock(server, chunk, false);

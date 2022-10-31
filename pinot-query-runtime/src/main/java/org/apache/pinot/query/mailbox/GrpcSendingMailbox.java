@@ -35,6 +35,8 @@ import org.apache.pinot.query.runtime.blocks.TransferableBlock;
 
 /**
  * GRPC implementation of the {@link SendingMailbox}.
+ *
+ * send mailbox content and receive mailbox status.
  */
 public class GrpcSendingMailbox implements SendingMailbox<TransferableBlock> {
   private final GrpcMailboxService _mailboxService;
@@ -53,6 +55,7 @@ public class GrpcSendingMailbox implements SendingMailbox<TransferableBlock> {
   public void init()
       throws UnsupportedOperationException {
     ManagedChannel channel = _mailboxService.getChannel(_mailboxId);
+    // TODO: consider sharing the stub.
     PinotMailboxGrpc.PinotMailboxStub stub = PinotMailboxGrpc.newStub(channel);
     _statusStreamObserver = new MailboxStatusStreamObserver();
     _statusStreamObserver.init(stub.open(_statusStreamObserver));

@@ -32,10 +32,6 @@ import org.apache.pinot.spi.utils.CommonConstants;
  */
 public class WorkerInstance extends ServerInstance {
 
-  public WorkerInstance(InstanceConfig instanceConfig) {
-    super(instanceConfig);
-  }
-
   public WorkerInstance(String hostname, int nettyPort, int grpcPort, int servicePort, int mailboxPort) {
     super(toInstanceConfig(hostname, nettyPort, grpcPort, servicePort, mailboxPort));
   }

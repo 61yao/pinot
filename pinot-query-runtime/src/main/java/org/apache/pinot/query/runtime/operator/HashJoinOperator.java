@@ -48,13 +48,12 @@ import org.apache.pinot.query.runtime.operator.operands.FilterOperand;
 public class HashJoinOperator extends BaseOperator<TransferableBlock> {
   private static final String EXPLAIN_NAME = "BROADCAST_JOIN";
 
+  // TODO: Fix hash join bug.
   private final HashMap<Integer, List<Object[]>> _broadcastHashTable;
   private final Operator<TransferableBlock> _leftTableOperator;
   private final Operator<TransferableBlock> _rightTableOperator;
   private final JoinRelType _joinType;
   private final DataSchema _resultSchema;
-  private final DataSchema _leftTableSchema;
-  private final DataSchema _rightTableSchema;
   private final int _resultRowSize;
   private final List<FilterOperand> _joinClauseEvaluators;
   private boolean _isHashTableBuilt;
@@ -62,16 +61,14 @@ public class HashJoinOperator extends BaseOperator<TransferableBlock> {
   private KeySelector<Object[], Object[]> _leftKeySelector;
   private KeySelector<Object[], Object[]> _rightKeySelector;
 
-  public HashJoinOperator(Operator<TransferableBlock> leftTableOperator, DataSchema leftSchema,
-      Operator<TransferableBlock> rightTableOperator, DataSchema rightSchema, DataSchema outputSchema,
+  public HashJoinOperator(Operator<TransferableBlock> leftTableOperator,
+      Operator<TransferableBlock> rightTableOperator, DataSchema outputSchema,
       JoinNode.JoinKeys joinKeys, List<RexExpression> joinClauses, JoinRelType joinType) {
     _leftKeySelector = joinKeys.getLeftJoinKeySelector();
     _rightKeySelector = joinKeys.getRightJoinKeySelector();
     _leftTableOperator = leftTableOperator;
     _rightTableOperator = rightTableOperator;
     _resultSchema = outputSchema;
-    _leftTableSchema = leftSchema;
-    _rightTableSchema = rightSchema;
     _joinClauseEvaluators = new ArrayList<>(joinClauses.size());
     for (RexExpression joinClause : joinClauses) {
       _joinClauseEvaluators.add(FilterOperand.toFilterOperand(joinClause, _resultSchema));
@@ -113,6 +110,7 @@ public class HashJoinOperator extends BaseOperator<TransferableBlock> {
   private void buildBroadcastHashTable() {
     if (!_isHashTableBuilt) {
       TransferableBlock rightBlock = _rightTableOperator.nextBlock();
+      // TODO: fix busy waiting or propagate error.
       while (!TransferableBlockUtils.isEndOfStream(rightBlock)) {
         List<Object[]> container = rightBlock.getContainer();
         // put all the rows into corresponding hash collections keyed by the key selector function.
@@ -151,12 +149,12 @@ public class HashJoinOperator extends BaseOperator<TransferableBlock> {
         }
       }
       return new TransferableBlock(rows, _resultSchema, BaseDataBlock.Type.ROW);
-    } else if (leftBlock.isErrorBlock()) {
+    }
+    if (leftBlock.isErrorBlock()) {
       _upstreamErrorBlock = leftBlock;
       return _upstreamErrorBlock;
-    } else {
-      return new TransferableBlock(DataBlockUtils.getEndOfStreamDataBlock(_resultSchema));
     }
+    return new TransferableBlock(DataBlockUtils.getEndOfStreamDataBlock(_resultSchema));
   }
 
   private Object[] joinRow(Object[] leftRow, @Nullable Object[] rightRow) {

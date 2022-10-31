@@ -20,7 +20,6 @@ package org.apache.pinot.query.runtime.executor;
 
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import org.apache.pinot.common.metrics.ServerMetrics;
 import org.apache.pinot.common.request.context.ThreadTimer;
 import org.apache.pinot.core.common.Operator;
 import org.apache.pinot.core.util.trace.TraceRunnable;
@@ -29,7 +28,6 @@ import org.apache.pinot.query.planner.stage.StageNode;
 import org.apache.pinot.query.runtime.blocks.TransferableBlock;
 import org.apache.pinot.query.runtime.blocks.TransferableBlockUtils;
 import org.apache.pinot.query.runtime.plan.DistributedStagePlan;
-import org.apache.pinot.spi.env.PinotConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,16 +40,11 @@ import org.slf4j.LoggerFactory;
  */
 public class WorkerQueryExecutor {
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkerQueryExecutor.class);
-  private PinotConfiguration _config;
-  private ServerMetrics _serverMetrics;
   private MailboxService<TransferableBlock> _mailboxService;
   private String _hostName;
   private int _port;
 
-  public void init(PinotConfiguration config, ServerMetrics serverMetrics,
-      MailboxService<TransferableBlock> mailboxService, String hostName, int port) {
-    _config = config;
-    _serverMetrics = serverMetrics;
+  public void init(MailboxService<TransferableBlock> mailboxService, String hostName, int port) {
     _mailboxService = mailboxService;
     _hostName = hostName;
     _port = port;
@@ -78,6 +71,7 @@ public class WorkerQueryExecutor {
       @Override
       public void runJob() {
         ThreadTimer executionThreadTimer = new ThreadTimer();
+        // TODO: Fix busy waiting.
         while (!TransferableBlockUtils.isEndOfStream(rootOperator.nextBlock())) {
           LOGGER.debug("Result Block acquired");
         }

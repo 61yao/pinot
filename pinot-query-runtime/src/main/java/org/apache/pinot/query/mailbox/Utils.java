@@ -36,8 +36,4 @@ public final class Utils {
   public static MailboxIdentifier toMailboxIdentifier(String mailboxId) {
     return new StringMailboxIdentifier(mailboxId);
   }
-
-  public static String fromMailboxIdentifier(MailboxIdentifier mailboxId) {
-    return mailboxId.toString();
-  }
 }

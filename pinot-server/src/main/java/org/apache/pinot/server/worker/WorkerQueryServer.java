@@ -18,11 +18,8 @@
  */
 package org.apache.pinot.server.worker;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.apache.helix.HelixManager;
 import org.apache.pinot.common.metrics.ServerMetrics;
-import org.apache.pinot.common.utils.NamedThreadFactory;
 import org.apache.pinot.core.data.manager.InstanceDataManager;
 import org.apache.pinot.query.runtime.QueryRunner;
 import org.apache.pinot.query.service.QueryConfig;
@@ -31,17 +28,17 @@ import org.apache.pinot.spi.env.PinotConfiguration;
 import org.apache.pinot.spi.utils.CommonConstants;
 import org.apache.pinot.spi.utils.NetUtils;
 
-
+// Current implementation of this class is closely couple with pinot server. We should consider separating this out
+// since  we may want to spin independent intermediate servers in the future.
 public class WorkerQueryServer {
-  private static final int DEFAULT_EXECUTOR_THREAD_NUM = 5;
-
-  private final ExecutorService _executor;
   private final int _queryServicePort;
   private final PinotConfiguration _configuration;
   private final HelixManager _helixManager;
-
+  // GRPC service that accept stage query request
   private QueryServer _queryWorkerService;
+  // Process the distributed stage plan.
   private QueryRunner _queryRunner;
+  // Only needed by leaf server.
   private InstanceDataManager _instanceDataManager;
   private ServerMetrics _serverMetrics;
 
@@ -56,8 +53,6 @@ public class WorkerQueryServer {
     _queryRunner = new QueryRunner();
     _queryRunner.init(_configuration, _instanceDataManager, _helixManager, _serverMetrics);
     _queryWorkerService = new QueryServer(_queryServicePort, _queryRunner);
-    _executor = Executors.newFixedThreadPool(DEFAULT_EXECUTOR_THREAD_NUM,
-        new NamedThreadFactory("worker_query_server_enclosure_on_" + _queryServicePort + "_port"));
   }
 
   private static PinotConfiguration toWorkerQueryConfig(PinotConfiguration configuration) {
@@ -100,6 +95,5 @@ public class WorkerQueryServer {
 
   public void shutDown() {
     _queryWorkerService.shutdown();
-    _executor.shutdown();
   }
 }

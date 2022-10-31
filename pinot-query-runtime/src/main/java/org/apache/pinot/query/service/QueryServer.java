@@ -44,13 +44,13 @@ import org.slf4j.LoggerFactory;
  */
 public class QueryServer extends PinotQueryWorkerGrpc.PinotQueryWorkerImplBase {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcQueryServer.class);
-
   private final Server _server;
   private final QueryRunner _queryRunner;
   private final ExecutorService _executorService;
 
   public QueryServer(int port, QueryRunner queryRunner) {
     _server = ServerBuilder.forPort(port).addService(this).build();
+    // TODO: Make # of query worker thread configurable.
     _executorService = Executors.newFixedThreadPool(ResourceManager.DEFAULT_QUERY_WORKER_THREADS,
         new NamedThreadFactory("query_worker_on_" + port + "_port"));
     _queryRunner = queryRunner;
@@ -71,7 +71,10 @@ public class QueryServer extends PinotQueryWorkerGrpc.PinotQueryWorkerImplBase {
   public void shutdown() {
     LOGGER.info("Shutting down QueryWorker");
     try {
+      // TODO: consider using terminating with deadline.
+      _executorService.shutdown();
       _queryRunner.shutDown();
+      // TODO: adding a deadline for server shut down for waiting termination. Otherwise, this may never shut down.
       _server.shutdown().awaitTermination();
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -97,6 +100,7 @@ public class QueryServer extends PinotQueryWorkerGrpc.PinotQueryWorkerImplBase {
     responseObserver.onNext(Worker.QueryResponse.newBuilder().putMetadata("OK", "OK").build());
     responseObserver.onCompleted();
 
+    // TODO: pass a deadline to support cancellation.
     // start a new GRPC ctx has all the values as the current context, but won't be cancelled
     Context ctx = Context.current().fork();
     // Set ctx as the current context within the Runnable can start asynchronous work here that will not

@@ -128,7 +128,6 @@ public class PinotAggregateExchangeNodeInsertRule extends RelOptRule {
     // add the exchange as the input node to the relation builder.
     RelBuilder relBuilder = ruleCall.builder();
     relBuilder.push(exchange);
-    List<RexNode> inputExprs = new ArrayList<>(relBuilder.fields());
 
     // make input ref to the exchange after the leaf aggregate.
     RexBuilder rexBuilder = exchange.getCluster().getRexBuilder();
@@ -144,7 +143,7 @@ public class PinotAggregateExchangeNodeInsertRule extends RelOptRule {
 
     for (int oldCallIndex = 0; oldCallIndex < oldCalls.size(); oldCallIndex++) {
       AggregateCall oldCall = oldCalls.get(oldCallIndex);
-      convertAggCall(rexBuilder, oldAggRel, oldCallIndex, oldCall, newCalls, aggCallMapping, inputExprs);
+      convertAggCall(rexBuilder, oldAggRel, oldCallIndex, oldCall, newCalls, aggCallMapping);
     }
 
     // create new aggregate relation.
@@ -168,8 +167,7 @@ public class PinotAggregateExchangeNodeInsertRule extends RelOptRule {
    * <p>For COUNT operations, the intermediate stage will be converted to SUM.
    */
   private static void convertAggCall(RexBuilder rexBuilder, Aggregate oldAggRel, int oldCallIndex,
-      AggregateCall oldCall, List<AggregateCall> newCalls, Map<AggregateCall, RexNode> aggCallMapping,
-      List<RexNode> inputExprs) {
+      AggregateCall oldCall, List<AggregateCall> newCalls, Map<AggregateCall, RexNode> aggCallMapping) {
     final int nGroups = oldAggRel.getGroupCount();
     final SqlAggFunction oldAggregation = oldCall.getAggregation();
     final SqlKind aggKind = oldAggregation.getKind();

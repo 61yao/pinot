@@ -41,12 +41,10 @@ import org.apache.pinot.query.routing.WorkerManager;
  * This class is non-threadsafe. Do not reuse the stage planner for multiple query plans.
  */
 public class StagePlanner {
-  private final PlannerContext _plannerContext;
   private final WorkerManager _workerManager;
   private int _stageIdCounter;
 
-  public StagePlanner(PlannerContext plannerContext, WorkerManager workerManager) {
-    _plannerContext = plannerContext;
+  public StagePlanner(WorkerManager workerManager) {
     _workerManager = workerManager;
   }
 
@@ -92,33 +90,28 @@ public class StagePlanner {
       StageNode nextStageRoot = walkRelPlan(node.getInput(0), getNewStageId());
       RelDistribution distribution = ((LogicalExchange) node).getDistribution();
       return createSendReceivePair(nextStageRoot, distribution, currentStageId);
-    } else {
-      StageNode stageNode = RelToStageConverter.toStageNode(node, currentStageId);
-      List<RelNode> inputs = node.getInputs();
-      for (RelNode input : inputs) {
-        stageNode.addInput(walkRelPlan(input, currentStageId));
-      }
-      return stageNode;
     }
+    StageNode stageNode = RelToStageConverter.toStageNode(node, currentStageId);
+    List<RelNode> inputs = node.getInputs();
+    for (RelNode input : inputs) {
+      stageNode.addInput(walkRelPlan(input, currentStageId));
+    }
+    return stageNode;
   }
-
 
   private StageNode createSendReceivePair(StageNode nextStageRoot, RelDistribution distribution, int currentStageId) {
     List<Integer> distributionKeys = distribution.getKeys();
     RelDistribution.Type exchangeType = distribution.getType();
-
     // make an exchange sender and receiver node pair
     // only HASH_DISTRIBUTED requires a partition key selector; so all other types (SINGLETON and BROADCAST)
     // of exchange will not carry a partition key selector.
     KeySelector<Object[], Object[]> keySelector = exchangeType == RelDistribution.Type.HASH_DISTRIBUTED
         ? new FieldSelectionKeySelector(distributionKeys) : null;
-
     StageNode mailboxSender = new MailboxSendNode(nextStageRoot.getStageId(), nextStageRoot.getDataSchema(),
         currentStageId, exchangeType, keySelector);
     StageNode mailboxReceiver = new MailboxReceiveNode(currentStageId, nextStageRoot.getDataSchema(),
         nextStageRoot.getStageId(), exchangeType, keySelector, mailboxSender);
     mailboxSender.addInput(nextStageRoot);
-
     return mailboxReceiver;
   }
 

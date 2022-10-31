@@ -92,8 +92,7 @@ public class QueryEnvironment {
 
     _config = Frameworks.newConfigBuilder().traitDefs()
         .operatorTable(new ChainedSqlOperatorTable(Arrays.asList(
-            PinotOperatorTable.instance(),
-            _catalogReader)))
+            PinotOperatorTable.instance(), _catalogReader)))
         .defaultSchema(_rootSchema.plus())
         .sqlToRelConverterConfig(SqlToRelConverter.config()
             .withHintStrategyTable(getHintStrategyTable())
@@ -128,7 +127,7 @@ public class QueryEnvironment {
     try (PlannerContext plannerContext = new PlannerContext(_config, _catalogReader, _typeFactory, _hepProgram)) {
       plannerContext.setOptions(sqlNodeAndOptions.getOptions());
       RelRoot relRoot = compileQuery(sqlNodeAndOptions.getSqlNode(), plannerContext);
-      return toDispatchablePlan(relRoot, plannerContext);
+      return toDispatchablePlan(relRoot);
     } catch (Exception e) {
       throw new RuntimeException("Error composing query plan for: " + sqlQuery, e);
     }
@@ -215,9 +214,9 @@ public class QueryEnvironment {
     }
   }
 
-  private QueryPlan toDispatchablePlan(RelRoot relRoot, PlannerContext plannerContext) {
+  private QueryPlan toDispatchablePlan(RelRoot relRoot) {
     // 5. construct a dispatchable query plan.
-    StagePlanner queryStagePlanner = new StagePlanner(plannerContext, _workerManager);
+    StagePlanner queryStagePlanner = new StagePlanner(_workerManager);
     return queryStagePlanner.makePlan(relRoot);
   }
 

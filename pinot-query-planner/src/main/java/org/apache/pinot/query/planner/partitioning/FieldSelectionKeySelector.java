@@ -33,23 +33,9 @@ public class FieldSelectionKeySelector implements KeySelector<Object[], Object[]
   @ProtoProperties
   private List<Integer> _columnIndices;
 
-  public FieldSelectionKeySelector() {
-  }
-
-  public FieldSelectionKeySelector(int columnIndex) {
-    _columnIndices = Collections.singletonList(columnIndex);
-  }
-
   public FieldSelectionKeySelector(List<Integer> columnIndices) {
     _columnIndices = new ArrayList<>();
     _columnIndices.addAll(columnIndices);
-  }
-
-  public FieldSelectionKeySelector(int... columnIndices) {
-    _columnIndices = new ArrayList<>();
-    for (int columnIndex : columnIndices) {
-      _columnIndices.add(columnIndex);
-    }
   }
 
   public List<Integer> getColumnIndices() {

@@ -56,8 +56,6 @@ import org.slf4j.LoggerFactory;
  * {@code QueryDispatcher} dispatch a query to different workers.
  */
 public class QueryDispatcher {
-  private static final Logger LOGGER = LoggerFactory.getLogger(QueryDispatcher.class);
-
   private final Map<String, DispatchClient> _dispatchClientMap = new ConcurrentHashMap<>();
 
   public QueryDispatcher() {
@@ -129,6 +127,7 @@ public class QueryDispatcher {
     List<DataTable> resultDataBlocks = new ArrayList<>();
     TransferableBlock transferableBlock;
     long timeoutWatermark = System.nanoTime() + timeoutNano;
+    // TODO: handle busy waiting.
     while (System.nanoTime() < timeoutWatermark) {
       transferableBlock = mailboxReceiveOperator.nextBlock();
       if (TransferableBlockUtils.isEndOfStream(transferableBlock) && transferableBlock.isErrorBlock()) {
@@ -203,7 +202,7 @@ public class QueryDispatcher {
       int port) {
     MailboxReceiveOperator mailboxReceiveOperator =
         new MailboxReceiveOperator(mailboxService, dataSchema, sendingInstances,
-            RelDistribution.Type.RANDOM_DISTRIBUTED, null, hostname, port, jobId, stageId);
+            RelDistribution.Type.RANDOM_DISTRIBUTED, hostname, port, jobId, stageId);
     return mailboxReceiveOperator;
   }
 

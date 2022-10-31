@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A standalone server which will listen on a port and serve queries based on the given configuration. Cluster
- * management is maintained outside of this class.
+ * management is maintained outside this class.
  */
 public class ServerInstance {
   private static final Logger LOGGER = LoggerFactory.getLogger(ServerInstance.class);

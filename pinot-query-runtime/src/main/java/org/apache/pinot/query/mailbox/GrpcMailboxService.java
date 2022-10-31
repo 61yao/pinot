@@ -43,7 +43,7 @@ import org.apache.pinot.spi.env.PinotConfiguration;
  * </ul>
  */
 public class GrpcMailboxService implements MailboxService<TransferableBlock> {
-  // channel manager
+  // channel manager maps from to_host:to_port to managed channel.
   private final ChannelManager _channelManager;
   private final String _hostname;
   private final int _mailboxPort;
@@ -85,6 +85,8 @@ public class GrpcMailboxService implements MailboxService<TransferableBlock> {
    * @param mailboxId the id of the mailbox.
    */
   public SendingMailbox<TransferableBlock> getSendingMailbox(MailboxIdentifier mailboxId) {
+    // jobId is requestId
+    // mailboxId in the format of [jobId:fromHost:fromPort:toHost:toPort]
     return _sendingMailboxMap.computeIfAbsent(mailboxId.toString(), (mId) -> new GrpcSendingMailbox(mId, this));
   }
 

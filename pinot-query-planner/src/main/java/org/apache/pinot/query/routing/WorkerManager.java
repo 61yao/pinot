@@ -63,6 +63,7 @@ public class WorkerManager {
     if (scannedTables.size() == 1) {
       // table scan stage, need to attach server as well as segment info for each physical table type.
       String logicalTableName = scannedTables.get(0);
+      // TODO: set a deadline.
       Map<String, RoutingTable> routingTableMap = getRoutingTable(logicalTableName);
       if (routingTableMap.size() == 0) {
         throw new IllegalArgumentException("Unable to find routing entries for table: " + logicalTableName);

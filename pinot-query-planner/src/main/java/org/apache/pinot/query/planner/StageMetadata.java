@@ -59,6 +59,7 @@ public class StageMetadata implements Serializable {
     _timeBoundaryInfo = null;
   }
 
+  // Attach scan tables.
   public void attach(StageNode stageNode) {
     if (stageNode instanceof TableScanNode) {
       _scannedTables.add(((TableScanNode) stageNode).getTableName());
