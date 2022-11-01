@@ -125,7 +125,7 @@ public class CalciteSqlParser {
       SqlParserImpl sqlParser = newSqlParser(inStream);
       SqlNodeList sqlNodeList = sqlParser.SqlStmtsEof();
       // Extract OPTION statements from sql.
-      SqlNodeAndOptions sqlNodeAndOptions = extractSqlNodeAndOptions(sql, sqlNodeList);
+      SqlNodeAndOptions sqlNodeAndOptions = extractSqlNodeAndOptions(sqlNodeList);
       // add legacy OPTIONS keyword-based options
       if (options.size() > 0) {
         sqlNodeAndOptions.setExtraOptions(extractOptionsMap(options));
@@ -138,7 +138,7 @@ public class CalciteSqlParser {
   }
 
   @VisibleForTesting
-  static SqlNodeAndOptions extractSqlNodeAndOptions(String sql, SqlNodeList sqlNodeList) {
+  static SqlNodeAndOptions extractSqlNodeAndOptions(SqlNodeList sqlNodeList) {
     PinotSqlType sqlType = null;
     SqlNode statementNode = null;
     Map<String, String> options = new HashMap<>();

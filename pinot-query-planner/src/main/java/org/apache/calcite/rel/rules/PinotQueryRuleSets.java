@@ -74,7 +74,6 @@ public class PinotQueryRuleSets {
           CoreRules.AGGREGATE_JOIN_TRANSPOSE,
           // aggregate union rule
           CoreRules.AGGREGATE_UNION_AGGREGATE,
-
           // reduce aggregate functions like AVG, STDDEV_POP etc.
           CoreRules.AGGREGATE_REDUCE_FUNCTIONS,
 

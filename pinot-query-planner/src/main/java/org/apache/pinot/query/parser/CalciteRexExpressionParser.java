@@ -82,12 +82,6 @@ public class CalciteRexExpressionParser {
     return groupByExpr;
   }
 
-  private static List<Expression> convertDistinctSelectList(RexExpression.FunctionCall rexCall, PinotQuery pinotQuery) {
-    List<Expression> selectExpr = new ArrayList<>();
-    selectExpr.add(convertDistinctAndSelectListToFunctionExpression(rexCall, pinotQuery));
-    return selectExpr;
-  }
-
   public static List<Expression> convertOrderByList(List<RexExpression> rexInputRefs,
       List<RelFieldCollation.Direction> directions, PinotQuery pinotQuery) {
     List<Expression> orderByExpr = new ArrayList<>();

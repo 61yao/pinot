@@ -73,10 +73,8 @@ public class QueryEnvironment {
   private final Prepare.CatalogReader _catalogReader;
   private final RelDataTypeFactory _typeFactory;
 
+  // Holds optimization rules.
   private final HepProgram _hepProgram;
-
-  // Pinot extensions
-  private final Collection<RelOptRule> _logicalRuleSet;
   private final WorkerManager _workerManager;
 
   public QueryEnvironment(TypeFactory typeFactory, CalciteSchema rootSchema, WorkerManager workerManager) {
@@ -96,16 +94,14 @@ public class QueryEnvironment {
         .defaultSchema(_rootSchema.plus())
         .sqlToRelConverterConfig(SqlToRelConverter.config()
             .withHintStrategyTable(getHintStrategyTable())
+            // Push down join conditions.
             .addRelBuilderConfigTransform(c -> c.withPushJoinCondition(true))
             .addRelBuilderConfigTransform(c -> c.withAggregateUnique(true)))
         .build();
 
-    // optimizer rules
-    _logicalRuleSet = PinotQueryRuleSets.LOGICAL_OPT_RULES;
-
     // optimizer
     HepProgramBuilder hepProgramBuilder = new HepProgramBuilder();
-    for (RelOptRule relOptRule : _logicalRuleSet) {
+    for (RelOptRule relOptRule : PinotQueryRuleSets.LOGICAL_OPT_RULES) {
       hepProgramBuilder.addRuleInstance(relOptRule);
     }
     _hepProgram = hepProgramBuilder.build();
@@ -185,7 +181,7 @@ public class QueryEnvironment {
       throws Exception {
     // 2. validator to validate.
     SqlNode validated = plannerContext.getValidator().validate(parsed);
-    if (null == validated || !validated.getKind().belongsTo(SqlKind.QUERY)) {
+    if (validated == null || !validated.getKind().belongsTo(SqlKind.QUERY)) {
       throw new IllegalArgumentException(
           String.format("unsupported SQL query, cannot validate out a valid sql from:\n%s", parsed));
     }
@@ -224,7 +220,9 @@ public class QueryEnvironment {
   // utils
   // --------------------------------------------------------------------------
 
-  private HintStrategyTable getHintStrategyTable() {
+  // Empty hints.
+  // Add strategy and error handling.
+ static private HintStrategyTable getHintStrategyTable() {
     return HintStrategyTable.builder().build();
   }
 }

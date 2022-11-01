@@ -117,12 +117,10 @@ public class QueryRunner {
           ServerRequestUtils.constructServerQueryRequest(distributedStagePlan, requestMetadataMap,
               _helixPropertyStore);
 
+      // Each sub query is one data block.
       // send the data table via mailbox in one-off fashion (e.g. no block-level split, one data table/partition key)
       List<BaseDataBlock> serverQueryResults = new ArrayList<>(serverQueryRequests.size());
       // TODO: Add early termination if any of the server query fails.
-      // This server query request doesn't have time out set, which means each of this query request set timeout
-      // to default, i.e. 15_000L ms (15s). If every request fails, we will wait here for # of request x 15s.
-      // TODO: run these request in parallel.
       for (ServerQueryRequest request : serverQueryRequests) {
         serverQueryResults.add(processServerQuery(request, executorService));
       }
@@ -133,7 +131,6 @@ public class QueryRunner {
           receivingStageMetadata.getServerInstances(), sendNode.getExchangeType(), sendNode.getPartitionKeySelector(),
           _hostname, _port, serverQueryRequests.get(0).getRequestId(), sendNode.getStageId());
       int blockCounter = 0;
-      // TODO: Fix busy waiting or propagate the error.
       while (!TransferableBlockUtils.isEndOfStream(mailboxSendOperator.nextBlock())) {
         LOGGER.debug("Acquired transferable block: {}", blockCounter++);
       }

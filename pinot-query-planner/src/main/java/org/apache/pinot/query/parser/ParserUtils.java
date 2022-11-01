@@ -48,19 +48,6 @@ final class ParserUtils {
       SqlParser.configBuilder().setLex(PINOT_LEX).setConformance(SqlConformanceEnum.BABEL)
           .setParserFactory(SqlBabelParserImpl.FACTORY).build();
 
-  // TODO: move this to use parser syntax extension.
-  // To Keep the backward compatibility with 'OPTION' Functionality in PQL, which is used to
-  // provide more hints for query processing.
-  //
-  // PQL syntax is: `OPTION (<key> = <value>)`
-  //
-  // Multiple OPTIONs is also supported by:
-  // either
-  //   `OPTION (<k1> = <v1>, <k2> = <v2>, <k3> = <v3>)`
-  // or
-  //   `OPTION (<k1> = <v1>) OPTION (<k2> = <v2>) OPTION (<k3> = <v3>)`
-  static final Pattern OPTIONS_REGEX_PATTEN = Pattern.compile("option\\s*\\(([^\\)]+)\\)", Pattern.CASE_INSENSITIVE);
-
   private ParserUtils() {
     // do not instantiate.
   }

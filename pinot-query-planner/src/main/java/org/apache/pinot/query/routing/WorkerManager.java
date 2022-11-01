@@ -47,7 +47,6 @@ import org.apache.pinot.sql.parsers.CalciteSqlCompiler;
  * the worker manager later when we split out the query-spi layer.
  */
 public class WorkerManager {
-
   private final String _hostName;
   private final int _port;
   private final RoutingManager _routingManager;
@@ -60,10 +59,11 @@ public class WorkerManager {
 
   public void assignWorkerToStage(int stageId, StageMetadata stageMetadata) {
     List<String> scannedTables = stageMetadata.getScannedTables();
-    if (scannedTables.size() == 1) {
+    // Leaf stage.
+    if (scannedTables.size() > 0) {
+      Preconditions.checkState(scannedTables.size() == 1);
       // table scan stage, need to attach server as well as segment info for each physical table type.
       String logicalTableName = scannedTables.get(0);
-      // TODO: set a deadline.
       Map<String, RoutingTable> routingTableMap = getRoutingTable(logicalTableName);
       if (routingTableMap.size() == 0) {
         throw new IllegalArgumentException("Unable to find routing entries for table: " + logicalTableName);

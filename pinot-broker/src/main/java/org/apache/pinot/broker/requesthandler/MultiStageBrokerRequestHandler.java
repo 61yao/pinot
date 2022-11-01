@@ -93,7 +93,6 @@ public class MultiStageBrokerRequestHandler extends BaseBrokerRequestHandler {
         new WorkerManager(_reducerHostname, _reducerPort, routingManager));
     _queryDispatcher = new QueryDispatcher();
     _mailboxService = MultiplexingMailboxService.newInstance(_reducerHostname, _reducerPort, config);
-
     // TODO: move this to a startUp() function.
     _mailboxService.start();
   }
@@ -102,11 +101,11 @@ public class MultiStageBrokerRequestHandler extends BaseBrokerRequestHandler {
   public BrokerResponse handleRequest(JsonNode request, @Nullable SqlNodeAndOptions sqlNodeAndOptions,
       @Nullable RequesterIdentity requesterIdentity, RequestContext requestContext)
       throws Exception {
+    // TODO: Use UUID for request ID
     long requestId = _requestIdGenerator.incrementAndGet();
     requestContext.setBrokerId(_brokerId);
     requestContext.setRequestId(requestId);
     requestContext.setRequestArrivalTimeMillis(System.currentTimeMillis());
-
     // First-stage access control to prevent unauthenticated requests from using up resources. Secondary table-level
     // check comes later.
     boolean hasAccess = _accessControlFactory.create().hasAccess(requesterIdentity);
@@ -123,15 +122,12 @@ public class MultiStageBrokerRequestHandler extends BaseBrokerRequestHandler {
     }
     String query = sql.asText();
     requestContext.setQuery(query);
-    return handleRequest(requestId, query, sqlNodeAndOptions, request, requesterIdentity, requestContext);
+    return handleRequest(requestId, query, sqlNodeAndOptions, request, requestContext);
   }
 
   private BrokerResponseNative handleRequest(long requestId, String query,
-      @Nullable SqlNodeAndOptions sqlNodeAndOptions, JsonNode request, @Nullable RequesterIdentity requesterIdentity,
-      RequestContext requestContext)
-      throws Exception {
+      @Nullable SqlNodeAndOptions sqlNodeAndOptions, JsonNode request, RequestContext requestContext) throws Exception {
     LOGGER.debug("SQL query for request {}: {}", requestId, query);
-
     long compilationStartTimeNs;
     QueryPlan queryPlan;
     try {
@@ -144,6 +140,7 @@ public class MultiStageBrokerRequestHandler extends BaseBrokerRequestHandler {
           String plan = _queryEnvironment.explainQuery(query, sqlNodeAndOptions);
           return constructMultistageExplainPlan(query, plan);
         case SELECT:
+          // TODO: Figure out what's supported and what is not supported.
         default:
           queryPlan = _queryEnvironment.planQuery(query, sqlNodeAndOptions);
           break;

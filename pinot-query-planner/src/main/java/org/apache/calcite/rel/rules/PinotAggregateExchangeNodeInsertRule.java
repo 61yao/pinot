@@ -113,8 +113,10 @@ public class PinotAggregateExchangeNodeInsertRule extends RelOptRule {
     List<Integer> groupSetIndices = ImmutableIntList.range(0, oldAggRel.getGroupCount());
     LogicalExchange exchange = null;
     if (groupSetIndices.size() == 0) {
+      // Hash distributed no key.
       exchange = LogicalExchange.create(newLeafAgg, RelDistributions.hash(Collections.emptyList()));
     } else {
+      // Hash distributed on group by keys.
       exchange = LogicalExchange.create(newLeafAgg, RelDistributions.hash(groupSetIndices));
     }
 

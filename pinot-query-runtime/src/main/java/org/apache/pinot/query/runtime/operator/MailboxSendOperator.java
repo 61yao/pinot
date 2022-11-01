@@ -182,6 +182,7 @@ public class MailboxSendOperator extends BaseOperator<TransferableBlock> {
   private void sendDataTableBlockToServers(List<ServerInstance> servers, TransferableBlock transferableBlock,
       BaseDataBlock.Type type, boolean isEndOfStream) {
     if (isEndOfStream) {
+      // TODO: early termination and send data block concurrently.
       for (ServerInstance server : servers) {
         sendDataTableBlock(server, transferableBlock, true);
       }

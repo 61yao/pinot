@@ -87,6 +87,7 @@ public class MailboxReceiveOperator extends BaseOperator<TransferableBlock> {
     _port = port;
     _jobId = jobId;
     _stageId = stageId;
+    // 10s timeout
     _timeout = QueryConfig.DEFAULT_TIMEOUT_NANO;
     _upstreamErrorBlock = null;
   }
@@ -111,6 +112,7 @@ public class MailboxReceiveOperator extends BaseOperator<TransferableBlock> {
     // TODO: do a round robin check against all MailboxContentStreamObservers and find which one that has data.
     boolean hasOpenedMailbox = true;
     long timeoutWatermark = System.nanoTime() + _timeout;
+    // Timeout on single getNextBlock.
     while (hasOpenedMailbox && System.nanoTime() < timeoutWatermark) {
       hasOpenedMailbox = false;
       for (ServerInstance sendingInstance : _sendingStageInstances) {
@@ -128,6 +130,7 @@ public class MailboxReceiveOperator extends BaseOperator<TransferableBlock> {
             }
           }
         } catch (Exception e) {
+          // TODO: Do early termination
           LOGGER.error(String.format("Error receiving data from mailbox %s", sendingInstance), e);
         }
       }
@@ -135,9 +138,8 @@ public class MailboxReceiveOperator extends BaseOperator<TransferableBlock> {
     if (System.nanoTime() >= timeoutWatermark) {
       LOGGER.error("Timed out after polling mailboxes: {}", _sendingStageInstances);
       return TransferableBlockUtils.getErrorTransferableBlock(QueryException.EXECUTION_TIMEOUT_ERROR);
-    } else {
-      return TransferableBlockUtils.getEndOfStreamTransferableBlock(_dataSchema);
     }
+    return TransferableBlockUtils.getEndOfStreamTransferableBlock(_dataSchema);
   }
 
   private MailboxIdentifier toMailboxId(ServerInstance serverInstance) {

@@ -55,6 +55,7 @@ public class PinotSortExchangeNodeInsertRule extends RelOptRule {
   public void onMatch(RelOptRuleCall call) {
     Sort sort = call.rel(0);
     // TODO: this is a single value
+    // Hash distributed no keys.
     LogicalExchange exchange = LogicalExchange.create(sort.getInput(), RelDistributions.hash(Collections.emptyList()));
     call.transformTo(LogicalSort.create(exchange, sort.getCollation(), sort.offset, sort.fetch));
   }

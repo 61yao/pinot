@@ -33,6 +33,7 @@ public class PinotFilterExpandSearchRule extends RelOptRule {
       new PinotFilterExpandSearchRule(PinotRuleUtils.PINOT_REL_FACTORY);
 
   public PinotFilterExpandSearchRule(RelBuilderFactory factory) {
+    // TODO: operand is deprecated.
     super(operand(LogicalFilter.class, any()), factory, null);
   }
 

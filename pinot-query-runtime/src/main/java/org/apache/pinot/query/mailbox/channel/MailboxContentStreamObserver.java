@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 public class MailboxContentStreamObserver implements StreamObserver<Mailbox.MailboxContent> {
   private static final Logger LOGGER = LoggerFactory.getLogger(MailboxContentStreamObserver.class);
   private static final int DEFAULT_MAILBOX_QUEUE_CAPACITY = 5;
+  // Poll timeout in milliseconds. 1 second.
   private static final long DEFAULT_MAILBOX_POLL_TIMEOUT = 1000L;
   private final GrpcMailboxService _mailboxService;
   private final StreamObserver<Mailbox.MailboxStatus> _responseObserver;
@@ -72,8 +73,10 @@ public class MailboxContentStreamObserver implements StreamObserver<Mailbox.Mail
    * null here means that MailboxReceiveOperator won't consider this as an error.
    */
   public Mailbox.MailboxContent poll() {
+    // Infinite loop during error.
     while (!isCompleted()) {
       try {
+        // return null when timeout.
         Mailbox.MailboxContent content = _receivingBuffer.poll(DEFAULT_MAILBOX_POLL_TIMEOUT, TimeUnit.MILLISECONDS);
         if (content != null) {
           return content;
@@ -85,6 +88,7 @@ public class MailboxContentStreamObserver implements StreamObserver<Mailbox.Mail
     return null;
   }
 
+  // _isCompleted is not set to true during error.
   public boolean isCompleted() {
     return _isCompleted.get() && _receivingBuffer.isEmpty();
   }
@@ -95,6 +99,7 @@ public class MailboxContentStreamObserver implements StreamObserver<Mailbox.Mail
     GrpcReceivingMailbox receivingMailbox =
         (GrpcReceivingMailbox) _mailboxService.getReceivingMailbox(new StringMailboxIdentifier(_mailboxId));
     receivingMailbox.init(this);
+    // Begin of stream key.
     if (!mailboxContent.getMetadataMap().containsKey(ChannelUtils.MAILBOX_METADATA_BEGIN_OF_STREAM_KEY)) {
       // when the receiving end receives a message put it in the mailbox queue.
       _receivingBuffer.offer(mailboxContent);
@@ -109,7 +114,7 @@ public class MailboxContentStreamObserver implements StreamObserver<Mailbox.Mail
           builder.putMetadata(ChannelUtils.MAILBOX_METADATA_END_OF_STREAM_KEY, "true");
         }
         Mailbox.MailboxStatus status = builder.build();
-        // returns the buffer available size to sender for rate controller / throttling.
+        // TODO: returns the buffer available size to sender for rate controller / throttling.
         _responseObserver.onNext(status);
       }
     }
@@ -122,8 +127,10 @@ public class MailboxContentStreamObserver implements StreamObserver<Mailbox.Mail
           .setPayload(ByteString.copyFrom(
               TransferableBlockUtils.getErrorTransferableBlock(new RuntimeException(e)).getDataBlock().toBytes()))
           .putMetadata(ChannelUtils.MAILBOX_METADATA_END_OF_STREAM_KEY, "true").build());
+      _isCompleted.set(true);
       throw new RuntimeException(e);
     } catch (IOException ioe) {
+      _isCompleted.set(true);
       throw new RuntimeException("Unable to encode exception for cascade reporting: " + e, ioe);
     }
   }

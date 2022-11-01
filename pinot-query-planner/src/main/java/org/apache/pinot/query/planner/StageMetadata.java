@@ -40,6 +40,7 @@ import org.apache.pinot.query.planner.stage.TableScanNode;
  * </ul>
  */
 public class StageMetadata implements Serializable {
+  // Currently, we only have at most one scan table.
   private List<String> _scannedTables;
 
   // used for assigning server/worker nodes.

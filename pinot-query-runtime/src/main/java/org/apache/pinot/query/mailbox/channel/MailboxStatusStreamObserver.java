@@ -32,9 +32,12 @@ import org.apache.pinot.common.proto.Mailbox;
  * can use the {@link MailboxStatusStreamObserver#send(Mailbox.MailboxContent)} API to send data packet to the receiving
  * end.
  */
+// Send mailbox content and receive mailbox status.
 public class MailboxStatusStreamObserver implements StreamObserver<Mailbox.MailboxStatus> {
+  // TODO: make it configurable.
   private static final int DEFAULT_MAILBOX_QUEUE_CAPACITY = 5;
   private final AtomicInteger _bufferSize = new AtomicInteger(5);
+  // _isCompleted is not used.
   private final AtomicBoolean _isCompleted = new AtomicBoolean(false);
 
   private StreamObserver<Mailbox.MailboxContent> _mailboxContentStreamObserver;

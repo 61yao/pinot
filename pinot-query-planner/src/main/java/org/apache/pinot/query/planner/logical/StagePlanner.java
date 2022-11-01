@@ -66,12 +66,12 @@ public class StagePlanner {
     // global root needs to send results back to the ROOT, a.k.a. the client response node. the last stage only has one
     // receiver so doesn't matter what the exchange type is. setting it to SINGLETON by default.
     StageNode globalSenderNode = new MailboxSendNode(globalStageRoot.getStageId(), globalStageRoot.getDataSchema(),
-        0, RelDistribution.Type.RANDOM_DISTRIBUTED, null);
+        0, RelDistribution.Type.SINGLETON, null);
     globalSenderNode.addInput(globalStageRoot);
 
     StageNode globalReceiverNode =
         new MailboxReceiveNode(0, globalStageRoot.getDataSchema(), globalStageRoot.getStageId(),
-            RelDistribution.Type.RANDOM_DISTRIBUTED, null, globalSenderNode);
+            RelDistribution.Type.SINGLETON, null, globalSenderNode);
 
     QueryPlan queryPlan = StageMetadataVisitor.attachMetadata(relRoot.fields, globalReceiverNode);
 
@@ -105,6 +105,7 @@ public class StagePlanner {
     // make an exchange sender and receiver node pair
     // only HASH_DISTRIBUTED requires a partition key selector; so all other types (SINGLETON and BROADCAST)
     // of exchange will not carry a partition key selector.
+    // Key selector can be empty.
     KeySelector<Object[], Object[]> keySelector = exchangeType == RelDistribution.Type.HASH_DISTRIBUTED
         ? new FieldSelectionKeySelector(distributionKeys) : null;
     StageNode mailboxSender = new MailboxSendNode(nextStageRoot.getStageId(), nextStageRoot.getDataSchema(),

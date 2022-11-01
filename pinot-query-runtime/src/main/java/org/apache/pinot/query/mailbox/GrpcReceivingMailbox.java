@@ -37,6 +37,7 @@ import org.apache.pinot.query.runtime.blocks.TransferableBlockUtils;
  * GRPC implementation of the {@link ReceivingMailbox}.
  */
 public class GrpcReceivingMailbox implements ReceivingMailbox<TransferableBlock> {
+  // 0.1 second timeout.
   private static final long DEFAULT_MAILBOX_INIT_TIMEOUT = 100L;
   private final GrpcMailboxService _mailboxService;
   private final String _mailboxId;
@@ -88,14 +89,12 @@ public class GrpcReceivingMailbox implements ReceivingMailbox<TransferableBlock>
     return isInitialized() && _contentStreamObserver.isCompleted();
   }
 
-  // TODO: fix busy wait. This should be guarded by timeout.
   private boolean waitForInitialize()
       throws Exception {
-    if (_initializationLatch.getCount() > 0) {
+    if (!isInitialized()) {
       return _initializationLatch.await(DEFAULT_MAILBOX_INIT_TIMEOUT, TimeUnit.MILLISECONDS);
-    } else {
-      return true;
     }
+    return true;
   }
 
   @Override
