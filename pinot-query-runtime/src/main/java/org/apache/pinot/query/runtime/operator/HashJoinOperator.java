@@ -144,7 +144,8 @@ public class HashJoinOperator extends BaseOperator<TransferableBlock> {
         return TransferableBlockUtils.getNoOpTransferableBlock();
       }
       // JOIN each left block with the right block.
-      return buildJoinedDataBlock(_leftTableOperator.nextBlock());
+      TransferableBlock resultBlock = buildJoinedDataBlock(_leftTableOperator.nextBlock());
+      return resultBlock;
     } catch (Exception e) {
       return TransferableBlockUtils.getErrorTransferableBlock(e);
     }

@@ -1,0 +1,61 @@
+{
+  "psql_non_null_basic_join": {
+    "tables": {
+      "J1_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "j",
+            "type": "INT"
+          },
+          {
+            "name": "t",
+            "type": "STRING"
+          }
+        ],
+        "inputs": [
+          [1, 4, "one"],
+          [2, 3, "two"],
+          [3, 2, "three"],
+          [4, 1, "four"],
+          [5, 0, "five"],
+          [6, 6, "six"],
+          [7, 7, "seven"],
+          [8, 8, "eight"]
+        ]
+      },
+      "J2_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "k",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, -1],
+          [2, 2],
+          [3, -3],
+          [2, 4],
+          [5, -5],
+          [5, -5]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "Basic join without null",
+        "sql": "SELECT t1.i, t1.j, t1.t, t2.i, t2.k FROM {J1_TBL} t1, {J2_TBL} t2;"
+      }
+    ]
+  }
+}
+
+

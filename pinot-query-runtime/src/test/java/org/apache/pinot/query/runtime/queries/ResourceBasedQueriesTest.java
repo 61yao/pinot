@@ -185,12 +185,12 @@ public class ResourceBasedQueriesTest extends QueryRunnerTestBase {
 
   // TODO: name the test using testCaseName for testng reports
   @Test(dataProvider = "testResourceQueryTestCaseProviderInputOnly")
-  public void testQueryTestCasesWithH2(String testCaseName, String sql, String expect)
+  public void testQueryTestCasesWithH2(String testCaseName, String sql, String expect, boolean skipSort)
       throws Exception {
     // query pinot
     runQuery(sql, expect).ifPresent(rows -> {
       try {
-        compareRowEquals(rows, queryH2(sql));
+        compareRowEquals(rows, queryH2(sql), skipSort);
       } catch (Exception e) {
         Assert.fail(e.getMessage(), e);
       }
@@ -198,9 +198,9 @@ public class ResourceBasedQueriesTest extends QueryRunnerTestBase {
   }
 
   @Test(dataProvider = "testResourceQueryTestCaseProviderBoth")
-  public void testQueryTestCasesWithOutput(String testCaseName, String sql, List<Object[]> expectedRows, String expect)
+  public void testQueryTestCasesWithOutput(String testCaseName, String sql, List<Object[]> expectedRows, String expect, boolean skipSort)
       throws Exception {
-    runQuery(sql, expect).ifPresent(rows -> compareRowEquals(rows, expectedRows));
+    runQuery(sql, expect).ifPresent(rows -> compareRowEquals(rows, expectedRows, skipSort));
   }
 
   private Optional<List<Object[]>> runQuery(String sql, final String except) {
@@ -251,7 +251,7 @@ public class ResourceBasedQueriesTest extends QueryRunnerTestBase {
           for (List<Object> objs : orgRows) {
             expectedRows.add(objs.toArray());
           }
-          Object[] testEntry = new Object[]{testCaseName, sql, expectedRows, queryCase._expectedException};
+          Object[] testEntry = new Object[]{testCaseName, sql, expectedRows, queryCase._expectedException, queryCase._skipSort};
           providerContent.add(testEntry);
         }
       }
@@ -277,7 +277,7 @@ public class ResourceBasedQueriesTest extends QueryRunnerTestBase {
         }
         if (queryCase._outputs == null) {
           String sql = replaceTableName(testCaseName, queryCase._sql);
-          Object[] testEntry = new Object[]{testCaseName, sql, queryCase._expectedException};
+          Object[] testEntry = new Object[]{testCaseName, sql, queryCase._expectedException,  queryCase._skipSort};
           providerContent.add(testEntry);
         }
       }
@@ -301,7 +301,9 @@ public class ResourceBasedQueriesTest extends QueryRunnerTestBase {
         BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
       String resource;
       while ((resource = br.readLine()) != null) {
-        testFilenames.add(resource);
+        if(resource.contains("Debug.json")) {
+          testFilenames.add(resource);
+        }
       }
     }
     // Load each test file.

@@ -172,7 +172,7 @@ public class QueryRunnerTest extends QueryRunnerTestBase {
     List<Object[]> resultRows = queryRunner(sql);
     // query H2 for data
     List<Object[]> expectedRows = queryH2(sql);
-    compareRowEquals(resultRows, expectedRows);
+    compareRowEquals(resultRows, expectedRows, false);
   }
 
   @Test(dataProvider = "testDataWithSqlExecutionExceptions")

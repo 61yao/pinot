@@ -1,0 +1,939 @@
+{
+  "psql_basic_join": {
+    "tables": {
+      "J1_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "j",
+            "type": "INT"
+          },
+          {
+            "name": "t",
+            "type": "STRING"
+          }
+        ],
+        "inputs": [
+          [1, 4, "one"],
+          [2, 3, "two"],
+          [3, 2, "three"],
+          [4, 1, "four"],
+          [5, 0, "five"],
+          [6, 6, "six"],
+          [7, 7, "seven"],
+          [8, 8, "eight"],
+          [0, null, "zero"],
+          [null, null, "null"],
+          [null, 0, "zero"]
+        ]
+      },
+      "J2_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "k",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, -1],
+          [2, 2],
+          [3, -3],
+          [2, 4],
+          [5, -5],
+          [5, -5],
+          [0, null],
+          [null, null],
+          [null, 0]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "Basic join: with alias",
+        "ignored": true,
+        "sql": "SELECT * FROM {J1_TBL} t1 (a, b, c), {J2_TBL} t2 (d, e);",
+        "comment": "sql validator error: List of column aliases must have same degree as table; table has 4 columns ('t', 'i', 'j', 'ts'), whereas alias list has 3 columns"
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "Basic join",
+        "ignored": true,
+        "sql": "SELECT t1.i, t1.j, t1.t, t2.i, t2.k FROM {J1_TBL} t1, {J2_TBL} t2;",
+        "comment": "we could not handle null properly because sometimes null is output as null but sometimes it is limit number"
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "Basic join",
+        "sql": "SELECT t1.i, t2.i FROM {J1_TBL} t1, {J2_TBL} t2 where t1.i = t2.i;",
+        "ignored": true,
+        "comment": "null join keys should not be output"
+      }
+    ]
+  },
+  "psql_non_null_basic_join": {
+    "tables": {
+      "J1_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "j",
+            "type": "INT"
+          },
+          {
+            "name": "t",
+            "type": "STRING"
+          }
+        ],
+        "inputs": [
+          [1, 4, "one"],
+          [2, 3, "two"],
+          [3, 2, "three"],
+          [4, 1, "four"],
+          [5, 0, "five"],
+          [6, 6, "six"],
+          [7, 7, "seven"],
+          [8, 8, "eight"]
+        ]
+      },
+      "J2_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "k",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, -1],
+          [2, 2],
+          [3, -3],
+          [2, 4],
+          [5, -5],
+          [5, -5]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "Basic join without null",
+        "sql": "SELECT t1.i, t1.j, t1.t, t2.i, t2.k FROM {J1_TBL} t1, {J2_TBL} t2;"
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "Basic join without null",
+        "sql": "SELECT t1.i, t2.i FROM {J1_TBL} t1, {J2_TBL} t2 where t1.i = t2.i;"
+      }
+    ]
+  },
+  "psql_cross_join_non_null": {
+    "tables": {
+      "J1_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "j",
+            "type": "INT"
+          },
+          {
+            "name": "t",
+            "type": "STRING"
+          }
+        ],
+        "inputs": [
+          [1, 4, "one"],
+          [2, 3, "two"],
+          [3, 2, "three"],
+          [4, 1, "four"],
+          [5, 0, "five"],
+          [6, 6, "six"],
+          [7, 7, "seven"],
+          [8, 8, "eight"]
+        ]
+      },
+      "J2_TBL": {
+        "schema": [
+          {
+            "name": "j",
+            "type": "INT"
+          },
+          {
+            "name": "k",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, -1],
+          [2, 2],
+          [3, -3],
+          [2, 4],
+          [5, -5],
+          [5, -5]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "Basic cross join",
+        "sql": "SELECT * FROM {J1_TBL} CROSS JOIN {J2_TBL};"
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "Cross join ambiguous column",
+        "sql": "SELECT i, k, t FROM {J1_TBL} t1 CROSS JOIN {J2_TBL};",
+        "comment": "this should output error because of column ref ambiguity but we don't return error",
+        "ignored": true},
+      {
+        "psql": "7.2.1.1",
+        "description": "Cross join without ambiguous column",
+        "sql": "SELECT t1.i, k, t FROM {J1_TBL} t1 CROSS JOIN {J2_TBL} t2;"
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "Cross join nested",
+        "sql": "SELECT tx.ii, tx.jj, tx.kk FROM ({J1_TBL} t1 (a, b, c) CROSS JOIN {J2_TBL} t2 (d, e)) AS tx (ii, jj, tt, ii2, kk);",
+        "ignored": true,
+        "comment": "Non-query expression encountered in illegal context"
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "Cross join nested",
+        "sql": "SELECT * FROM {J1_TBL} CROSS JOIN {J2_TBL} a CROSS JOIN {J2_TBL} b;"
+      }
+    ]
+  },
+  "psql_inner_join": {
+    "tables": {
+      "J1_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "j",
+            "type": "INT"
+          },
+          {
+            "name": "t",
+            "type": "STRING"
+          }
+        ],
+        "inputs": [
+          [1, 4, "one"],
+          [2, 3, "two"],
+          [3, 2, "three"],
+          [4, 1, "four"],
+          [5, 0, "five"],
+          [6, 6, "six"],
+          [7, 7, "seven"],
+          [8, 8, "eight"]
+        ]
+      },
+      "J2_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "k",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, -1],
+          [2, 2],
+          [3, -3],
+          [2, 4],
+          [5, -5],
+          [5, -5]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "Inner join using",
+        "sql": "SELECT * FROM {J1_TBL} t1 INNER JOIN {J2_TBL} t2 USING (i);",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000],
+          [2, "two", 3, 31536000001, 2, 31536000001],
+          [2, "two", 3, 31536000001, 4, 31536000003],
+          [3, "three", 2, 31536000002, -3, 31536000002],
+          [5, "five", 0, 31536000004, -5, 31536000004],
+          [5, "five", 0,  31536000004, -5, 31536000005]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "Inner join using",
+        "sql": "SELECT * FROM {J1_TBL} JOIN {J2_TBL} USING (i);",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000],
+          [2, "two", 3, 31536000001, 2, 31536000001],
+          [2, "two", 3, 31536000001, 4, 31536000003],
+          [3, "three", 2, 31536000002, -3, 31536000002],
+          [5, "five", 0, 31536000004, -5, 31536000004],
+          [5, "five", 0,  31536000004, -5, 31536000005]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "Inner join using order by",
+        "sql": "SELECT * FROM {J1_TBL} t1 JOIN {J2_TBL} t2 USING (i) ORDER BY t1.i, t2.k, t1.ts, t2.ts;",
+        "skipSort": true,
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000],
+          [2, "two", 3, 31536000001, 2, 31536000001],
+          [2, "two", 3, 31536000001, 4, 31536000003],
+          [3, "three", 2, 31536000002, -3, 31536000002],
+          [5, "five", 0, 31536000004, -5, 31536000004],
+          [5, "five", 0,  31536000004, -5, 31536000005]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "join using alias",
+        "sql": "SELECT * FROM {J1_TBL} JOIN {J2_TBL} USING (i) WHERE {J1_TBL}.t = 'one';",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "join using alias",
+        "comment": "as x cannot be parsed",
+        "ignored": true,
+        "sql": "SELECT * FROM {J1_TBL} JOIN {J2_TBL} USING (i) AS x WHERE {J1_TBL}.t = 'one';",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000]
+        ]
+      }
+    ]
+  },
+  "psql_natural_join": {
+    "tables": {
+      "J1_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "j",
+            "type": "INT"
+          },
+          {
+            "name": "t",
+            "type": "STRING"
+          }
+        ],
+        "inputs": [
+          [
+            1,
+            4,
+            "one"
+          ],
+          [
+            2,
+            3,
+            "two"
+          ],
+          [
+            3,
+            2,
+            "three"
+          ],
+          [
+            4,
+            1,
+            "four"
+          ],
+          [
+            5,
+            0,
+            "five"
+          ],
+          [
+            6,
+            6,
+            "six"
+          ],
+          [
+            7,
+            7,
+            "seven"
+          ],
+          [
+            8,
+            8,
+            "eight"
+          ]
+        ]
+      },
+      "J2_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "k",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, -1],
+          [2, 2],
+          [3, -3],
+          [2, 4],
+          [5, -5],
+          [5, -5]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "natural join",
+        "sql": "SELECT * FROM {J1_TBL} NATURAL JOIN {J2_TBL};",
+        "ignored": true,
+        "comment": "this returns wrong result because we are not passing the equi join condition",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000],
+          [2, "two", 3, 31536000001, 2, 31536000001],
+          [2, "two", 3, 31536000001, 4, 31536000003],
+          [3, "three", 2, 31536000002, -3, 31536000002],
+          [5, "five", 0, 31536000004, -5, 31536000004],
+          [5, "five", 0,  31536000004, -5, 31536000005]
+        ]
+      }
+    ]
+  },
+  "psql_inequi_join": {
+    "tables": {
+      "J1_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "j",
+            "type": "INT"
+          },
+          {
+            "name": "t",
+            "type": "STRING"
+          }
+        ],
+        "inputs": [
+          [1, 4, "one"],
+          [2, 3, "two"],
+          [3, 2, "three"],
+          [4, 1, "four"],
+          [5, 0, "five"],
+          [6, 6, "six"],
+          [7, 7, "seven"],
+          [8, 8, "eight"]
+        ]
+      },
+      "J2_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "k",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, -1],
+          [2, 2],
+          [3, -3],
+          [2, 4],
+          [5, -5],
+          [5, -5]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "inequi join",
+        "sql": "SELECT * FROM {J1_TBL} JOIN {J2_TBL} on ({J1_TBL}.i <= {J2_TBL}.k);",
+        "outputs": [
+          ["two", 2, 3, 31536000001, 2, 2, 31536000001],
+          ["two", 2, 3, 31536000001, 2, 4, 31536000003],
+          ["one", 1, 4, 31536000000, 2, 4, 31536000003],
+          ["one", 1, 4, 31536000000, 2, 2, 31536000001],
+          ["three", 3, 2, 31536000002, 2, 4, 31536000003],
+          ["four", 4, 1, 31536000003, 2, 4, 31536000003]
+        ]
+      }
+    ]
+  },
+  "psql_outer_join": {
+    "tables": {
+      "J1_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "j",
+            "type": "INT"
+          },
+          {
+            "name": "t",
+            "type": "STRING"
+          }
+        ],
+        "inputs": [
+          [1, 4, "one"],
+          [2, 3, "two"],
+          [3, 2, "three"],
+          [4, 1, "four"],
+          [5, 0, "five"],
+          [6, 6, "six"],
+          [7, 7, "seven"],
+          [8, 8, "eight"]
+        ]
+      },
+      "J2_TBL": {
+        "schema": [
+          {
+            "name": "i",
+            "type": "INT"
+          },
+          {
+            "name": "k",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, -1],
+          [2, 2],
+          [3, -3],
+          [2, 4],
+          [5, -5],
+          [5, -5]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "left outer join",
+        "sql": "SELECT * FROM {J1_TBL} t1 LEFT OUTER JOIN {J2_TBL} t2 USING (i) ORDER BY t1.i, k, t, t1.ts, t2.ts;",
+        "comment": "Order by i doesn't work and it is reporting ambiguous error, which is different from psql",
+        "skipSort": true,
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000],
+          [2, "two", 3, 31536000001, 2, 31536000001],
+          [2, "two", 3, 31536000001, 4, 31536000003],
+          [3, "three", 2, 31536000002, -3, 31536000002],
+          [4, "four", 1, 31536000003, null, null],
+          [5, "five", 0, 31536000004, -5, 31536000004],
+          [5, "five", 0, 31536000004, -5, 31536000005],
+          [6, "six", 6, 31536000005, null, null],
+          [7, "seven", 7, 31536000006, null, null],
+          [8, "eight", 8, 31536000007, null, null]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "right outer join",
+        "sql": "SELECT * FROM {J1_TBL} RIGHT OUTER JOIN {J2_TBL} USING (i);",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000],
+          [2, "two", 3, 31536000001, 2, 31536000001],
+          [2, "two", 3, 31536000001, 4, 31536000003],
+          [3, "three", 2, 31536000002, -3, 31536000002],
+          [5, "five", 0, 31536000004, -5, 31536000004],
+          [5, "five", 0, 31536000004, -5, 31536000005]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "right outer join",
+        "sql": "SELECT * FROM {J1_TBL} RIGHT JOIN {J2_TBL} USING (i);",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000],
+          [2, "two", 3, 31536000001, 2, 31536000001],
+          [2, "two", 3, 31536000001, 4, 31536000003],
+          [3, "three", 2, 31536000002, -3, 31536000002],
+          [5, "five", 0, 31536000004, -5, 31536000004],
+          [5, "five", 0, 31536000004, -5, 31536000005]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "right outer join",
+        "sql": "SELECT * FROM {J1_TBL} t1 FULL OUTER JOIN {J2_TBL} t2 USING (i) ORDER BY t1.i, k, t, t1.ts, t2.ts;",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000],
+          [2, "two", 3, 31536000001, 2, 31536000001],
+          [2, "two", 3, 31536000001, 4, 31536000003],
+          [3, "three", 2, 31536000002, -3, 31536000002],
+          [4, "four", 1, 31536000003, null, null],
+          [5, "five", 0, 31536000004, -5, 31536000004],
+          [5, "five", 0, 31536000004, -5, 31536000005],
+          [6, "six", 6, 31536000005, null, null],
+          [7, "seven", 7, 31536000006, null, null],
+          [8, "eight", 8, 31536000007, null, null]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "full outer join",
+        "sql": "SELECT * FROM {J1_TBL} t1 FULL JOIN {J2_TBL} t2 USING (i) ORDER BY t1.i, k, t, t1.ts, t2.ts;",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000],
+          [2, "two", 3, 31536000001, 2, 31536000001],
+          [2, "two", 3, 31536000001, 4, 31536000003],
+          [3, "three", 2, 31536000002, -3, 31536000002],
+          [4, "four", 1, 31536000003, null, null],
+          [5, "five", 0, 31536000004, -5, 31536000004],
+          [5, "five", 0, 31536000004, -5, 31536000005],
+          [6, "six", 6, 31536000005, null, null],
+          [7, "seven", 7, 31536000006, null, null],
+          [8, "eight", 8, 31536000007, null, null]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "right outer join",
+        "sql": "SELECT * FROM {J1_TBL} t1 LEFT JOIN {J2_TBL} t2 USING (i) WHERE (t1.i = 1);",
+        "outputs": [
+          [1, "one", 4, 31536000000, -1, 31536000000]
+        ]
+      }
+    ]
+  },
+  "psql_multiway_full_join": {
+    "tables": {
+      "t1": {
+        "schema": [
+          {
+            "name": "name",
+            "type": "STRING"
+          },
+          {
+            "name": "n",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          ["bb", 1]
+        ]
+      },
+      "t2": {
+        "schema": [
+          {
+            "name": "name",
+            "type": "STRING"
+          },
+          {
+            "name": "n",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          ["bb", 11],
+          ["cc", 22],
+          ["ee", 42]
+        ]
+      },
+      "t3": {
+        "schema": [
+          {
+            "name": "name",
+            "type": "STRING"
+          },
+          {
+            "name": "n",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          ["bb", 13],
+          ["cc", 23],
+          ["dd", 33]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "multiway full join",
+        "sql": "SELECT * FROM {t1} FULL JOIN {t2} USING (name) FULL JOIN {t3} USING (name);",
+        "ignored": true,
+        "comment": "Column name 'name' in USING clause is not unique on one side of join",
+        "outputs": [
+          ["bb", 11, 31536000000, 12, 13, 31536000000],
+          ["cc", null, 31536000001, 22, 23, 31536000001],
+          ["dd", null, 31536000001, null, 33, 31536000001],
+          ["ee", null, 31536000001, 41, null, 31536000001]
+        ]
+      }
+    ]
+  },
+  "psql_subquery": {
+    "tables": {
+      "t1": {
+        "schema": [
+          {
+            "name": "name",
+            "type": "STRING"
+          },
+          {
+            "name": "n",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          ["bb", 1]
+        ]
+      },
+      "t2": {
+        "schema": [
+          {
+            "name": "name",
+            "type": "STRING"
+          },
+          {
+            "name": "n",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          ["bb", 11],
+          ["cc", 22],
+          ["ee", 42]
+        ]
+      },
+      "t3": {
+        "schema": [
+          {
+            "name": "name",
+            "type": "STRING"
+          },
+          {
+            "name": "n",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          ["bb", 13],
+          ["cc", 23],
+          ["dd", 33]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "sql": "SELECT * FROM (SELECT * FROM {t2}) INNER JOIN (SELECT * FROM {t3}) USING (name);",
+        "description": "inner join",
+        "outputs": [
+          ["bb", 11, 31536000000, 13, 31536000000],
+          ["cc", 22, 31536000001, 23, 31536000001]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "sql": "SELECT * FROM (SELECT name, n, 2 FROM {t2}) NATURAL INNER JOIN (SELECT name, n, 3 FROM {t3});",
+        "description": "natural inner join",
+        "ignored": true,
+        "comment": "We are not returning anything because we are not passing in the right join condition",
+        "outputs": [
+          ["bb", 11, 2, 31536000000, 13, 3, 31536000000],
+          ["cc", 22, 2, 31536000001, 23, 3, 31536000001]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "sql": "SELECT * FROM (SELECT * FROM {t2}) LEFT JOIN (SELECT * FROM {t3}) USING (name);",
+        "description": "left join",
+        "outputs": [
+          ["bb", 11, 31536000000, 13, 31536000000],
+          ["cc", 22, 31536000001, 23, 31536000001],
+          ["ee", 42, 31536000002, null, null]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "natural left join",
+        "sql": "SELECT * FROM (SELECT name, n, 2 FROM {t2}) NATURAL LEFT JOIN (SELECT name, n, 3 FROM {t3});",
+        "comment": "We are returning 3 columns instead. JoinOperator is returning right result but the final project drops the columns",
+        "ignored": true,
+        "outputs": [
+          ["bb", 11, 2, 31536000000, 13, 3, 31536000000],
+          ["cc", 22, 2, 31536000001, 23, 3, 31536000001],
+          ["ee", 42, 2, 31536000002, null, null, 31536000002]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "sql": "SELECT * FROM (SELECT * FROM {t2}) FULL JOIN (SELECT * FROM {t3}) USING (name);",
+        "description": "full join",
+        "outputs": [
+          ["bb", 11, 31536000000, 13, 31536000000],
+          ["cc", 22, 31536000001, 23, 31536000001],
+          ["dd", null, null, 33, 31536000002],
+          ["ee", 42, 31536000002, null, null]
+
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "natural full join",
+        "sql": "SELECT * FROM (SELECT name, n as s2_n, 2 as s2_2 FROM {t2}) NATURAL FULL JOIN (SELECT name, n as s3_n, 3 as s3_2 FROM {t3});",
+        "comment": "Same problem as previous one",
+        "ignored": true,
+        "outputs": [
+          ["bb", 11, 2, 31536000000, 13, 3, 31536000000],
+          ["cc", 22, 2, 31536000001, 23, 3, 31536000001],
+          ["ee", 42, 2, 31536000002, null, null, 31536000002]
+        ]
+      },
+      {
+        "psql": "7.2.1.1",
+        "description": "natural full join",
+        "sql": "SELECT * FROM (SELECT name, n as s1_n FROM t1) as s1 FULL JOIN (SELECT name, 2 as s2_n FROM t2) as s2 ON (s1_n = s2_n);",
+        "comment": "Join on constant keys are not supported and we don't support table ref",
+        "ignored": true,
+        "outputs": [
+        ]
+      }
+    ]
+  },
+  "psql_nullability": {
+    "tables": {
+      "x": {
+        "schema": [
+          {
+            "name": "x1",
+            "type": "INT"
+          },
+          {
+            "name": "x2",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, 11],
+          [2, 22],
+          [3, null],
+          [4, 44],
+          [5, null]
+        ]
+      },
+      "y": {
+        "schema": [
+          {
+            "name": "y1",
+            "type": "INT"
+          },
+          {
+            "name": "y2",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, 111],
+          [2, 222],
+          [3, 333],
+          [4, null]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "left join",
+        "sql": "select * from {x} left join {y} on (x1 = y1 and x2 is not null);",
+        "comment": "null values are not supported",
+        "outputs": [
+        ]
+      }
+    ]
+  },
+  "psql_nullability": {
+    "tables": {
+      "x": {
+        "schema": [
+          {
+            "name": "x1",
+            "type": "INT"
+          },
+          {
+            "name": "x2",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, 11],
+          [2, 22],
+          [3, null],
+          [4, 44],
+          [5, null]
+        ]
+      },
+      "y": {
+        "schema": [
+          {
+            "name": "y1",
+            "type": "INT"
+          },
+          {
+            "name": "y2",
+            "type": "INT"
+          }
+        ],
+        "inputs": [
+          [1, 111],
+          [2, 222],
+          [3, 333],
+          [4, null]
+        ]
+      }
+    },
+    "queries": [
+      {
+        "psql": "7.2.1.1",
+        "description": "left join",
+        "ignored": true,
+        "sql": "select * from {x} left join {y} on (x1 = y1 and x2 is not null);",
+        "comment": "not supported because leaf stage doesn't pass null value correctly to intermediate stage",
+        "outputs": [
+        ]
+      }
+    ]
+  }
+}
+
+

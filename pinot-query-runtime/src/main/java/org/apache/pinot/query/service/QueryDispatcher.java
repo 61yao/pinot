@@ -115,7 +115,7 @@ public class QueryDispatcher {
   public static List<DataBlock> reduceMailboxReceive(MailboxReceiveOperator mailboxReceiveOperator, long timeoutMs) {
     List<DataBlock> resultDataBlocks = new ArrayList<>();
     TransferableBlock transferableBlock;
-    long timeoutWatermark = System.nanoTime() + timeoutMs * 1_000_000L;
+    long timeoutWatermark = System.nanoTime() + timeoutMs * 1_000_000_000L;
     while (System.nanoTime() < timeoutWatermark) {
       transferableBlock = mailboxReceiveOperator.nextBlock();
       if (TransferableBlockUtils.isEndOfStream(transferableBlock) && transferableBlock.isErrorBlock()) {

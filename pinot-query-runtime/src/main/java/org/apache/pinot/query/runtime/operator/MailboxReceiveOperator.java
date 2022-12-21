@@ -79,7 +79,7 @@ public class MailboxReceiveOperator extends BaseOperator<TransferableBlock> {
     _mailboxService = mailboxService;
     Preconditions.checkState(SUPPORTED_EXCHANGE_TYPES.contains(exchangeType),
         "Exchange/Distribution type: " + exchangeType + " is not supported!");
-    long timeoutNano = (timeoutMs != null ? timeoutMs : QueryConfig.DEFAULT_MAILBOX_TIMEOUT_MS) * 1_000_000L;
+    long timeoutNano = (timeoutMs != null ? timeoutMs : QueryConfig.DEFAULT_MAILBOX_TIMEOUT_MS) * 1_000_000_000L;
     _deadlineTimestampNano = timeoutNano + System.nanoTime();
 
     _exchangeType = exchangeType;

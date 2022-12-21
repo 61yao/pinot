@@ -31,7 +31,7 @@ public class InMemoryMailboxService implements MailboxService<TransferableBlock>
   private final String _hostname;
   private final int _mailboxPort;
   private final Consumer<MailboxIdentifier> _receivedMailContentCallback;
-  static final int DEFAULT_CHANNEL_CAPACITY = 5;
+  static final int DEFAULT_CHANNEL_CAPACITY = 1000;
   // TODO: This should come from a config and should be consistent with the timeout for GrpcMailboxService
   static final int DEFAULT_CHANNEL_TIMEOUT_SECONDS = 1;
 

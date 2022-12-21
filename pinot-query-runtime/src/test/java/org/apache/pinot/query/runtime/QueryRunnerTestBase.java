@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
+import org.apache.pinot.common.utils.DataSchema;
 import org.apache.pinot.core.transport.ServerInstance;
 import org.apache.pinot.query.QueryEnvironment;
 import org.apache.pinot.query.QueryServerEnclosure;
@@ -58,7 +59,7 @@ import org.apache.pinot.spi.utils.ByteArray;
 import org.apache.pinot.spi.utils.CommonConstants;
 import org.apache.pinot.spi.utils.StringUtil;
 import org.testng.Assert;
-
+import java.time.Instant;
 
 public abstract class QueryRunnerTestBase extends QueryTestSet {
   protected static final double DOUBLE_CMP_EPSILON = 0.0001d;
@@ -66,6 +67,7 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
   protected static final String SEGMENT_BREAKER_STR = "------";
   protected static final GenericRow SEGMENT_BREAKER_ROW = new GenericRow();
   protected static final Random RANDOM_REQUEST_ID_GEN = new Random();
+  public static final long START_MILLIS = Instant.parse("1971-01-01T00:00:00Z").toEpochMilli();
   protected QueryEnvironment _queryEnvironment;
   protected String _reducerHostname;
   protected int _reducerGrpcPort;
@@ -103,9 +105,11 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
       }
     }
     Preconditions.checkNotNull(mailboxReceiveOperator);
+    DataSchema resultSchema = queryPlan.getQueryStageMap().get(0).getDataSchema();
+    System.out.println("resultSchema:" + Arrays.toString(resultSchema.getColumnNames()));
     return QueryDispatcher.toResultTable(
         QueryDispatcher.reduceMailboxReceive(mailboxReceiveOperator, CommonConstants.Broker.DEFAULT_BROKER_TIMEOUT_MS),
-        queryPlan.getQueryResultFields(), queryPlan.getQueryStageMap().get(0).getDataSchema()).getRows();
+        queryPlan.getQueryResultFields(), resultSchema).getRows();
   }
 
   protected List<Object[]> queryH2(String sql)
@@ -125,7 +129,17 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
     return result;
   }
 
-  protected void compareRowEquals(List<Object[]> resultRows, List<Object[]> expectedRows) {
+  protected void compareRowEquals(List<Object[]> resultRows, List<Object[]> expectedRows, boolean skipSort) {
+    System.out.println("expectedRows=====");
+    for (int i = 0; i < expectedRows.size(); i++) {
+      Object[] expectRow = expectedRows.get(i);
+      System.out.println(Arrays.toString(expectRow));
+    }
+    System.out.println("actualRows=====");
+    for (int i = 0; i < resultRows.size(); i++) {
+      Object[] resultRow = resultRows.get(i);
+      System.out.println(Arrays.toString(resultRow));
+    }
     Assert.assertEquals(resultRows.size(), expectedRows.size(),
         String.format("Mismatched number of results. expected: %s, actual: %s",
             expectedRows.stream().map(Arrays::toString).collect(Collectors.joining(",\n")),
@@ -181,8 +195,11 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
       }
       return 0;
     };
-    resultRows.sort(rowComp);
-    expectedRows.sort(rowComp);
+    if(!skipSort) {
+      resultRows.sort(rowComp);
+      expectedRows.sort(rowComp);
+    }
+    System.out.println("================resultRows=========================");
     for (int i = 0; i < resultRows.size(); i++) {
       Object[] resultRow = resultRows.get(i);
       Object[] expectedRow = expectedRows.get(i);
@@ -213,6 +230,7 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
 
   protected List<GenericRow> toRow(List<QueryTestCase.ColumnAndType> columnAndTypes, List<List<Object>> value) {
     List<GenericRow> result = new ArrayList<>(value.size());
+    long startMillis = START_MILLIS;
     for (int rowId = 0; rowId < value.size(); rowId++) {
       GenericRow row = new GenericRow();
       List<Object> rawRow = value.get(rowId);
@@ -224,7 +242,7 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
           row.putValue(columnAndType._name, rawRow.get(colId++));
         }
         // TODO: ts is built-in, but we should allow user overwrite
-        row.putValue("ts", System.currentTimeMillis());
+        row.putValue("ts", startMillis++);
         result.add(row);
       }
     }
@@ -354,6 +372,8 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
       public List<List<Object>> _outputs = null;
       @JsonProperty("expectedException")
       public String _expectedException;
+      @JsonProperty("skipSort")
+      public boolean _skipSort = false;
     }
 
     public static class ColumnAndType {

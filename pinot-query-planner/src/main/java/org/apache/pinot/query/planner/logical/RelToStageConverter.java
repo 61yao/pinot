@@ -117,7 +117,8 @@ public final class RelToStageConverter {
 
   private static StageNode convertLogicalJoin(LogicalJoin node, int currentStageId) {
     JoinRelType joinType = node.getJoinType();
-
+    // TODO: In natural join, the leftKeys and rightKeys are empty, and the equi condition is passed as condition of
+    // join node instead of nonEquiConditions. We need to pass in this condition to handle this case.
     // Parse out all equality JOIN conditions
     JoinInfo joinInfo = node.analyzeCondition();
     FieldSelectionKeySelector leftFieldSelectionKeySelector = new FieldSelectionKeySelector(joinInfo.leftKeys);
