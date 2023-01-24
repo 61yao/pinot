@@ -52,7 +52,7 @@ public class FilterOperator extends MultiStageOperator {
   private static final Logger LOGGER = LoggerFactory.getLogger(AggregateOperator.class);
   private final TransformOperand _filterOperand;
   private final DataSchema _dataSchema;
-  private TransferableBlock _upstreamErrorBlock;
+  private TransferableBlock _errorBlock = null;
 
   // TODO: Move to OperatorContext class.
   private OperatorStats _operatorStats;
@@ -62,7 +62,6 @@ public class FilterOperator extends MultiStageOperator {
     _upstreamOperator = upstreamOperator;
     _dataSchema = dataSchema;
     _filterOperand = TransformOperand.toTransformOperand(filter, dataSchema);
-    _upstreamErrorBlock = null;
     _operatorStats = new OperatorStats(requestId, stageId, EXPLAIN_NAME);
   }
 
@@ -83,12 +82,26 @@ public class FilterOperator extends MultiStageOperator {
   protected TransferableBlock getNextBlock() {
     _operatorStats.startTimer();
     try {
-      _operatorStats.endTimer();
-      TransferableBlock block = _upstreamOperator.nextBlock();
-      _operatorStats.startTimer();
-      return transform(block);
+      switch (_state) {
+        case FAILED:
+          return _errorBlock;
+        case FINISHED:
+          return TransferableBlockUtils.getEndOfStreamTransferableBlock();
+        case INITIALIZED:
+          // Fall through
+        case RUNNING:
+          _operatorStats.endTimer();
+          TransferableBlock block = _upstreamOperator.nextBlock();
+          _operatorStats.startTimer();
+          return transform(block);
+        default:
+          return TransferableBlockUtils.getErrorTransferableBlock(
+              new RuntimeException("Unsupported state:" + _state + " for operator :" + EXPLAIN_NAME));
+      }
     } catch (Exception e) {
-      return TransferableBlockUtils.getErrorTransferableBlock(e);
+      _errorBlock = TransferableBlockUtils.getErrorTransferableBlock(e);
+      _state = State.FAILED;
+      return _errorBlock;
     } finally {
       _operatorStats.endTimer();
     }
@@ -97,15 +110,18 @@ public class FilterOperator extends MultiStageOperator {
   @SuppressWarnings("ConstantConditions")
   private TransferableBlock transform(TransferableBlock block)
       throws Exception {
-    if (_upstreamErrorBlock != null) {
-      return _upstreamErrorBlock;
-    } else if (block.isErrorBlock()) {
-      _upstreamErrorBlock = block;
-      return _upstreamErrorBlock;
-    } else if (TransferableBlockUtils.isEndOfStream(block) || TransferableBlockUtils.isNoOpBlock(block)) {
+    if (block.isErrorBlock()) {
+      _errorBlock = block;
+      _state = State.FAILED;
+      return _errorBlock;
+    }
+    if (TransferableBlockUtils.isEndOfStream(block)){
+      _state = State.FINISHED;
       return block;
     }
-
+    if(TransferableBlockUtils.isNoOpBlock(block)){
+      return block;
+    }
     List<Object[]> resultRows = new ArrayList<>();
     List<Object[]> container = block.getContainer();
     for (Object[] row : container) {

@@ -27,7 +27,17 @@ import org.slf4j.LoggerFactory;
 public abstract class MultiStageOperator extends BaseOperator<TransferableBlock> implements AutoCloseable {
   private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(MultiStageOperator.class);
 
-  // TODO: use the API public List<? extends Operator> getChildOperators() to merge two APIs.
+  protected enum State{
+    INITIALIZED,
+    RUNNING,
+    FAILED,
+    FINISHED,
+  };
+
+  protected State _state = State.INITIALIZED;
+
+  protected TransferableBlock _errorBlock = null;
+
   @Override
   public List<MultiStageOperator> getChildOperators() {
     throw new UnsupportedOperationException();
@@ -45,5 +55,13 @@ public abstract class MultiStageOperator extends BaseOperator<TransferableBlock>
         // Continue processing because even one operator failed to be close, we should still close the rest.
       }
     }
+  }
+
+  public boolean isRunning(){
+    return _state == State.RUNNING;
+  }
+
+  public boolean isFailed(){
+    return _state == State.FAILED;
   }
 }

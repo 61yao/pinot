@@ -79,11 +79,6 @@ public class HashJoinOperator extends MultiStageOperator {
   private final List<TransformOperand> _joinClauseEvaluators;
   private boolean _isHashTableBuilt;
 
-  // Used by non-inner join.
-  // Needed to indicate we have finished processing all results after returning last block.
-  // TODO: Remove this special handling by fixing data block EOS abstraction or operator's invariant.
-  private boolean _isTerminated;
-  private TransferableBlock _upstreamErrorBlock;
   private KeySelector<Object[], Object[]> _leftKeySelector;
   private KeySelector<Object[], Object[]> _rightKeySelector;
 
@@ -117,7 +112,6 @@ public class HashJoinOperator extends MultiStageOperator {
     } else {
       _matchedRightRows = null;
     }
-    _upstreamErrorBlock = null;
     _operatorStats = new OperatorStats(requestId, stageId, EXPLAIN_NAME);
   }
 
@@ -140,25 +134,36 @@ public class HashJoinOperator extends MultiStageOperator {
   protected TransferableBlock getNextBlock() {
     _operatorStats.startTimer();
     try {
-      if (_isTerminated) {
-        return TransferableBlockUtils.getEndOfStreamTransferableBlock();
+      switch (_state){
+        case FAILED:
+          return _errorBlock;
+        case FINISHED:
+          return TransferableBlockUtils.getEndOfStreamTransferableBlock();
+        case INITIALIZED:
+          // Fall through
+        case RUNNING:
+          if (!_isHashTableBuilt) {
+            // Build JOIN hash table
+            buildBroadcastHashTable();
+          }
+          if (_errorBlock != null) {
+            return _errorBlock;
+          } else if (!_isHashTableBuilt) {
+            return TransferableBlockUtils.getNoOpTransferableBlock();
+          }
+          _operatorStats.endTimer();
+          TransferableBlock leftBlock = _leftTableOperator.nextBlock();
+          _operatorStats.startTimer();
+          // JOIN each left block with the right block.
+          return buildJoinedDataBlock(leftBlock);
+        default:
+          return TransferableBlockUtils.getErrorTransferableBlock(
+              new RuntimeException("Unsupported state:" + _state + " for operator :" + EXPLAIN_NAME));
       }
-      if (!_isHashTableBuilt) {
-        // Build JOIN hash table
-        buildBroadcastHashTable();
-      }
-      if (_upstreamErrorBlock != null) {
-        return _upstreamErrorBlock;
-      } else if (!_isHashTableBuilt) {
-        return TransferableBlockUtils.getNoOpTransferableBlock();
-      }
-      _operatorStats.endTimer();
-      TransferableBlock leftBlock = _leftTableOperator.nextBlock();
-      _operatorStats.startTimer();
-      // JOIN each left block with the right block.
-      return buildJoinedDataBlock(leftBlock);
     } catch (Exception e) {
-      return TransferableBlockUtils.getErrorTransferableBlock(e);
+      _state = State.FAILED;
+      _errorBlock = TransferableBlockUtils.getErrorTransferableBlock(e);
+      return _errorBlock;
     } finally {
       _operatorStats.endTimer();
     }
@@ -170,7 +175,8 @@ public class HashJoinOperator extends MultiStageOperator {
     _operatorStats.startTimer();
     while (!rightBlock.isNoOpBlock()) {
       if (rightBlock.isErrorBlock()) {
-        _upstreamErrorBlock = rightBlock;
+        _state = State.FAILED;
+        _errorBlock = rightBlock;
         return;
       }
       if (TransferableBlockUtils.isEndOfStream(rightBlock)) {
@@ -194,8 +200,9 @@ public class HashJoinOperator extends MultiStageOperator {
   private TransferableBlock buildJoinedDataBlock(TransferableBlock leftBlock)
       throws Exception {
     if (leftBlock.isErrorBlock()) {
-      _upstreamErrorBlock = leftBlock;
-      return _upstreamErrorBlock;
+      _state = State.FAILED;
+      _errorBlock = leftBlock;
+      return _errorBlock;
     }
     if (leftBlock.isNoOpBlock() || (leftBlock.isSuccessfulEndOfStreamBlock() && !needUnmatchedRightRows())) {
       return leftBlock;
@@ -216,7 +223,9 @@ public class HashJoinOperator extends MultiStageOperator {
           }
         }
       }
-      _isTerminated = true;
+      // Used by non-inner join.
+      // Needed to indicate we have finished processing all results after returning last block.
+      _state = State.FINISHED;
       _operatorStats.recordOutput(1, returnRows.size());
       return new TransferableBlock(returnRows, _resultSchema, DataBlock.Type.ROW);
     }

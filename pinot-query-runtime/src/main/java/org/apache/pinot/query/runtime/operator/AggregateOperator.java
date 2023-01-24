@@ -68,10 +68,9 @@ public class AggregateOperator extends MultiStageOperator {
   private final DataSchema _resultSchema;
   private final Accumulator[] _accumulators;
   private final Map<Key, Object[]> _groupByKeyHolder;
-  private TransferableBlock _upstreamErrorBlock;
+  private TransferableBlock _errorBlock = null;
 
   private boolean _readyToConstruct;
-  private boolean _hasReturnedAggregateBlock;
 
   // TODO: Move to OperatorContext class.
   private OperatorStats _operatorStats;
@@ -92,7 +91,6 @@ public class AggregateOperator extends MultiStageOperator {
       Map<String, Function<DataSchema.ColumnDataType, Merger>> mergers, long requestId, int stageId) {
     _inputOperator = inputOperator;
     _groupSet = groupSet;
-    _upstreamErrorBlock = null;
 
     // we expect all agg calls to be aggregate function calls
     _aggCalls = aggCalls.stream().map(RexExpression.FunctionCall.class::cast).collect(Collectors.toList());
@@ -110,8 +108,8 @@ public class AggregateOperator extends MultiStageOperator {
     _groupByKeyHolder = new HashMap<>();
     _resultSchema = dataSchema;
     _readyToConstruct = false;
-    _hasReturnedAggregateBlock = false;
     _operatorStats = new OperatorStats(requestId, stageId, EXPLAIN_NAME);
+    _state = State.INITIALIZED;
   }
 
   @Override
@@ -132,22 +130,26 @@ public class AggregateOperator extends MultiStageOperator {
   protected TransferableBlock getNextBlock() {
     _operatorStats.startTimer();
     try {
-      if (!_readyToConstruct && !consumeInputBlocks()) {
-        return TransferableBlockUtils.getNoOpTransferableBlock();
-      }
-
-      if (_upstreamErrorBlock != null) {
-        return _upstreamErrorBlock;
-      }
-
-      if (!_hasReturnedAggregateBlock) {
-        return produceAggregatedBlock();
-      } else {
-        // TODO: Move to close call.
-        return TransferableBlockUtils.getEndOfStreamTransferableBlock();
+      switch (_state) {
+        case FAILED:
+          return _errorBlock;
+        case FINISHED:
+          return TransferableBlockUtils.getEndOfStreamTransferableBlock();
+        case INITIALIZED:
+          // Fall through
+        case RUNNING:
+          if (!_readyToConstruct && !consumeInputBlocks()) {
+            return TransferableBlockUtils.getNoOpTransferableBlock();
+          }
+          return produceAggregatedBlock();
+        default:
+          return TransferableBlockUtils.getErrorTransferableBlock(
+              new RuntimeException("Unsupported state:" + _state + " for operator :" + EXPLAIN_NAME));
       }
     } catch (Exception e) {
-      return TransferableBlockUtils.getErrorTransferableBlock(e);
+      _errorBlock = TransferableBlockUtils.getErrorTransferableBlock(e);
+      _state = State.FAILED;
+      return _errorBlock;
     } finally {
       _operatorStats.endTimer();
     }
@@ -164,8 +166,8 @@ public class AggregateOperator extends MultiStageOperator {
       }
       rows.add(row);
     }
-    _hasReturnedAggregateBlock = true;
     if (rows.size() == 0) {
+      _state = State.FINISHED;
       return TransferableBlockUtils.getEndOfStreamTransferableBlock();
     } else {
       _operatorStats.recordOutput(1, rows.size());
@@ -183,7 +185,8 @@ public class AggregateOperator extends MultiStageOperator {
     while (!block.isNoOpBlock()) {
       // setting upstream error block
       if (block.isErrorBlock()) {
-        _upstreamErrorBlock = block;
+        _errorBlock = block;
+        _state = State.FAILED;
         return true;
       } else if (block.isEndOfStreamBlock()) {
         _readyToConstruct = true;
